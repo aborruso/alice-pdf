@@ -31,6 +31,8 @@ dependencies = [
     "mistralai>=1.0.0",
     "pandas>=2.0.0",
     "pyyaml>=6.0.0",
+    "boto3>=1.26.0",
+    "camelot-py[cv]>=1.0.9",
 ]
 
 [project.optional-dependencies]
