@@ -72,6 +72,138 @@ def test_cli_with_env_var(mock_extract_tables):
         mock_extract_tables.assert_called_once()
 
 
+def test_cli_default_engine_mistral_routes(mock_extract_tables):
+    """Default engine mistral should call extract_tables."""
+    with patch.object(sys, 'argv', ['alice-pdf', 'test.pdf', 'output/', '--api-key', 'k']):
+        result = main()
+        assert result == 0
+        mock_extract_tables.assert_called_once()
+
+
+def test_cli_textract_routes_and_env_creds():
+    """Textract engine should route to extract_tables_with_textract and pick env creds."""
+    import types
+
+    mock_module = types.ModuleType('alice_pdf.textract_extractor')
+    mock_module.extract_tables_with_textract = Mock(return_value=2)
+
+    with patch.object(sys, 'argv', [
+        'alice-pdf', 'test.pdf', 'output/', '--engine', 'textract', '--aws-region', 'eu-west-1'
+    ]), patch.dict('os.environ', {
+        'AWS_ACCESS_KEY_ID': 'env_access',
+        'AWS_SECRET_ACCESS_KEY': 'env_secret',
+    }, clear=True), patch.dict('sys.modules', {'alice_pdf.textract_extractor': mock_module}):
+        result = main()
+        assert result == 0
+        mock_module.extract_tables_with_textract.assert_called_once()
+        kwargs = mock_module.extract_tables_with_textract.call_args[1]
+        assert kwargs['aws_access_key_id'] == 'env_access'
+        assert kwargs['aws_secret_access_key'] == 'env_secret'
+        assert kwargs['aws_region'] == 'eu-west-1'
+
+
+def test_cli_textract_import_error():
+    """If textract_extractor import fails, CLI should exit with error."""
+    real_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == 'alice_pdf.textract_extractor' or name.endswith('.textract_extractor'):
+            raise ImportError("no textract")
+        return real_import(name, *args, **kwargs)
+
+    with patch.object(sys, 'argv', ['alice-pdf', 'test.pdf', 'out/', '--engine', 'textract']), \
+         patch('builtins.__import__', side_effect=fake_import):
+        result = main()
+        assert result == 1
+
+
+def test_cli_textract_cli_creds_override_env():
+    """CLI AWS creds should override env vars for textract engine."""
+    import types
+
+    mock_module = types.ModuleType('alice_pdf.textract_extractor')
+    mock_module.extract_tables_with_textract = Mock(return_value=1)
+
+    with patch.object(sys, 'argv', [
+        'alice-pdf', 'test.pdf', 'output/', '--engine', 'textract',
+        '--aws-region', 'cli-region',
+        '--aws-access-key-id', 'cli-ak',
+        '--aws-secret-access-key', 'cli-sk'
+    ]), patch.dict('os.environ', {
+        'AWS_ACCESS_KEY_ID': 'env_access',
+        'AWS_SECRET_ACCESS_KEY': 'env_secret',
+        'AWS_DEFAULT_REGION': 'env-region'
+    }, clear=True), patch.dict('sys.modules', {'alice_pdf.textract_extractor': mock_module}):
+        result = main()
+        assert result == 0
+        kwargs = mock_module.extract_tables_with_textract.call_args[1]
+        assert kwargs['aws_access_key_id'] == 'cli-ak'
+        assert kwargs['aws_secret_access_key'] == 'cli-sk'
+        assert kwargs['aws_region'] == 'cli-region'
+
+
+def test_cli_textract_missing_boto3_error():
+    """Missing boto3 should cause textract engine to error cleanly."""
+    real_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == 'boto3':
+            raise ImportError('no boto3')
+        return real_import(name, *args, **kwargs)
+
+    with patch.object(sys, 'argv', ['alice-pdf', 'test.pdf', 'out/', '--engine', 'textract']), \
+         patch('builtins.__import__', side_effect=fake_import):
+        result = main()
+        assert result == 1
+
+
+def test_cli_camelot_stream_routes():
+    """Camelot stream flavor should be passed through to extractor."""
+    import types
+
+    mock_module = types.ModuleType('alice_pdf.camelot_extractor')
+    mock_module.extract_tables_with_camelot = Mock(return_value=1)
+
+    with patch.object(sys, 'argv', [
+        'alice-pdf', 'test.pdf', 'out/', '--engine', 'camelot', '--camelot-flavor', 'stream'
+    ]), patch.dict('sys.modules', {'alice_pdf.camelot_extractor': mock_module}):
+        result = main()
+        assert result == 0
+        kwargs = mock_module.extract_tables_with_camelot.call_args[1]
+        assert kwargs['flavor'] == 'stream'
+
+
+def test_cli_camelot_lattice_default():
+    """Camelot default flavor should be lattice."""
+    import types
+
+    mock_module = types.ModuleType('alice_pdf.camelot_extractor')
+    mock_module.extract_tables_with_camelot = Mock(return_value=1)
+
+    with patch.object(sys, 'argv', [
+        'alice-pdf', 'test.pdf', 'out/', '--engine', 'camelot'
+    ]), patch.dict('sys.modules', {'alice_pdf.camelot_extractor': mock_module}):
+        result = main()
+        assert result == 0
+        kwargs = mock_module.extract_tables_with_camelot.call_args[1]
+        assert kwargs['flavor'] == 'lattice'
+
+
+def test_cli_camelot_missing_dep_error():
+    """Missing camelot dependency should produce clear error."""
+    real_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == 'alice_pdf.camelot_extractor' or name.endswith('.camelot_extractor'):
+            raise ImportError('no camelot')
+        return real_import(name, *args, **kwargs)
+
+    with patch.object(sys, 'argv', ['alice-pdf', 'test.pdf', 'out/', '--engine', 'camelot']), \
+         patch('builtins.__import__', side_effect=fake_import):
+        result = main()
+        assert result == 1
+
+
 def test_cli_with_pages_option(mock_extract_tables):
     """Test CLI with --pages option."""
     with patch.object(sys, 'argv', [

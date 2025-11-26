@@ -1,0 +1,61 @@
+# Extraction Workflow
+
+## MODIFIED Requirements
+
+### Requirement: Engine Routing
+
+The system SHALL route to the correct extraction engine based on `--engine` parameter including Camelot.
+
+#### Scenario: Camelot engine routing
+
+- **WHEN** `--engine camelot`
+- **THEN** `camelot_extractor.extract_tables_with_camelot()` is called with flavor parameter
+
+## ADDED Requirements
+
+### Requirement: Camelot Extraction
+
+The system SHALL extract tables from PDF using Camelot library.
+
+#### Scenario: Lattice mode extraction
+
+- **WHEN** Camelot is invoked with `flavor='lattice'`
+- **THEN** tables are detected using border lines
+- **AND** output CSV files are created per table per page
+
+#### Scenario: Stream mode extraction
+
+- **WHEN** Camelot is invoked with `flavor='stream'`
+- **THEN** tables are detected using whitespace/alignment
+- **AND** output CSV files are created per table per page
+
+### Requirement: Camelot Page Processing
+
+The system SHALL process PDF pages with Camelot using common parameters.
+
+#### Scenario: Page selection
+
+- **WHEN** pages parameter is provided (e.g., "1-3,5")
+- **THEN** only specified pages are processed with Camelot
+
+#### Scenario: Merge output
+
+- **WHEN** merge_output is True
+- **THEN** all Camelot-extracted tables are merged into single CSV with page column
+
+### Requirement: Camelot Error Handling
+
+The system SHALL handle Camelot-specific errors gracefully.
+
+#### Scenario: No tables found
+
+- **WHEN** Camelot finds no tables on a page
+- **THEN** page is logged with warning and skipped
+- **AND** processing continues with next page
+
+#### Scenario: PDF parsing error
+
+- **WHEN** Camelot fails to parse a page
+- **THEN** error is logged with page number
+- **AND** page is added to failed_pages list
+- **AND** processing continues with next page
