@@ -76,6 +76,12 @@ Examples:
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Enable debug logging"
     )
+    parser.add_argument(
+        "--timeout-ms",
+        type=int,
+        default=90_000,
+        help="Request timeout for Mistral API in milliseconds (default: 90000)",
+    )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
 
     args = parser.parse_args()
@@ -89,8 +95,8 @@ Examples:
 
     api_key = args.api_key or os.getenv("MISTRAL_API_KEY")
 
-    # Try to load from .env file if not found
-    if not api_key:
+    # Try to load from .env file if not found (unless explicitly ignored)
+    if not api_key and os.getenv("ALICE_PDF_IGNORE_ENV") != "1":
         env_file = Path(".env")
         if env_file.exists():
             with open(env_file, "r") as f:
@@ -129,6 +135,7 @@ Examples:
             dpi=args.dpi,
             merge_output=args.merge,
             custom_prompt=custom_prompt,
+            timeout_ms=args.timeout_ms,
         )
 
         logger.info(f"Extraction complete: {num_tables} tables processed")
