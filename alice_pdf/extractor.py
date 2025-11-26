@@ -11,6 +11,7 @@ from io import BytesIO
 import json
 import time
 import shutil
+import re
 
 import fitz  # PyMuPDF
 from PIL import Image
@@ -19,6 +20,18 @@ from mistralai.utils.retries import BackoffStrategy, RetryConfig
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+def natural_sort_key(path):
+    """
+    Generate a key for natural sorting of file paths.
+    Extracts page number from filename for proper numeric sorting.
+    """
+    # Extract page number from filename like "..._page12_table0.csv"
+    match = re.search(r'_page(\d+)_', path.name)
+    if match:
+        return int(match.group(1))
+    return 0
 
 
 def pdf_page_to_base64(pdf_path, page_num, dpi=150):
@@ -113,8 +126,10 @@ If no tables found, return: {"tables": []}
     try:
         response = client.chat.complete(model=model, messages=messages)
     except Exception as e:
-        logger.error(f"  API request failed: {e}")
-        return {"tables": []}
+        logger.error(f"  API request failed for page {page_num + 1}: {e}")
+        if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            logger.error(f"  Request timed out - consider increasing --timeout-ms")
+        raise  # Re-raise to stop processing instead of silently continuing
 
     result = response.choices[0].message.content
     logger.debug(f"  Raw response: {result}")
@@ -131,8 +146,9 @@ If no tables found, return: {"tables": []}
         return data
     except json.JSONDecodeError as e:
         logger.error(f"  Failed to parse JSON: {e}")
-        logger.error(f"  Response: {result}")
-        return {"tables": []}
+        logger.error(f"  Response (truncated): {result[:500]}")
+        # Raise exception to trigger retry logic for malformed JSON responses
+        raise ValueError(f"JSON parsing failed: {e}") from e
 
 
 def extract_tables(
@@ -144,7 +160,8 @@ def extract_tables(
     dpi=150,
     merge_output=False,
     custom_prompt=None,
-    timeout_ms=90_000,
+    timeout_ms=30_000,
+    resume=True,
 ):
     """
     Extract tables from PDF using Mistral OCR.
@@ -158,6 +175,7 @@ def extract_tables(
         dpi: Image resolution
         merge_output: If True, merge all tables into single CSV
         custom_prompt: Optional custom prompt describing table structure
+        resume: If True, skip pages that already have output files
 
     Returns:
         Number of tables extracted
@@ -165,18 +183,26 @@ def extract_tables(
     pdf_path = Path(pdf_path)
     output_dir = Path(output_dir)
 
-    # Clear output directory if it exists
-    if output_dir.exists():
-        import shutil
-
-        shutil.rmtree(output_dir)
-        logger.info(f"Cleared output directory: {output_dir}")
-
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize Mistral client with bounded timeout and retries to avoid hanging requests
+    # Delete merged file if exists
+    if merge_output:
+        merged_file = output_dir / f"{pdf_path.stem}_merged.csv"
+        if merged_file.exists():
+            merged_file.unlink()
+            logger.info(f"Deleted previous merged file: {merged_file.name}")
+
+    # Always delete the most recently created page CSV
+    existing_csvs = list(output_dir.glob(f"{pdf_path.stem}_page*.csv"))
+    if existing_csvs:
+        most_recent = max(existing_csvs, key=lambda p: p.stat().st_mtime)
+        most_recent.unlink()
+        logger.info(f"Deleted last created file: {most_recent.name}")
+
+    # Initialize Mistral client with timeout - no retries on timeout to fail fast
+    # Timeout is for HTTP read - if API doesn't respond in timeout_ms, skip page
     backoff = BackoffStrategy(
-        initial_interval=2, max_interval=20, exponent=2, max_elapsed_time=timeout_ms // 1000
+        initial_interval=2, max_interval=10, exponent=2, max_elapsed_time=timeout_ms // 1000
     )
     retry_config = RetryConfig(
         strategy="exponential",
@@ -206,11 +232,28 @@ def extract_tables(
 
     all_dataframes = []
     table_count = 0
+    failed_pages = []
 
     # Process each page
     for idx, page_num in enumerate(page_list, start=1):
         if page_num >= total_pages:
             logger.warning(f"Page {page_num + 1} out of range, skipping")
+            continue
+
+        # Check if page already processed - always skip to avoid duplicate API calls
+        existing_files = sorted(
+            list(output_dir.glob(f"{pdf_path.stem}_page{page_num + 1}_table*.csv")),
+            key=natural_sort_key
+        )
+        if existing_files:
+            logger.info(f"Page {page_num + 1} ({idx}/{len(page_list)}) - already processed, skipping")
+            # Count existing tables for this page
+            table_count += len(existing_files)
+            # Load existing dataframes for merge if needed
+            if merge_output:
+                for csv_file in existing_files:
+                    df = pd.read_csv(csv_file, encoding="utf-8-sig")
+                    all_dataframes.append(df)
             continue
 
         logger.info(f"Processing page {page_num + 1} ({idx}/{len(page_list)})")
@@ -222,10 +265,66 @@ def extract_tables(
             logger.error(f"  Failed to render page {page_num + 1}: {e}")
             continue
 
-        # Extract tables using Mistral
-        result = extract_tables_with_mistral(
-            client, image_base64, page_num, model=model, custom_prompt=custom_prompt
-        )
+        # Extract tables using Mistral with progressive timeout retry
+        result = None
+        max_attempts = 3
+        timeout_increments = [timeout_ms, timeout_ms * 2, timeout_ms * 4]  # 60s, 120s, 240s (doubling strategy)
+
+        for attempt in range(max_attempts):
+            current_timeout = timeout_increments[attempt]
+
+            try:
+                # Create client with current timeout for this attempt
+                backoff = BackoffStrategy(
+                    initial_interval=2, max_interval=10, exponent=2, max_elapsed_time=current_timeout // 1000
+                )
+                retry_config = RetryConfig(
+                    strategy="exponential",
+                    backoff=backoff,
+                    retry_connection_errors=True,
+                )
+                attempt_client = Mistral(api_key=api_key, timeout_ms=current_timeout, retry_config=retry_config)
+
+                if attempt > 0:
+                    logger.info(f"  Retry attempt {attempt}/{max_attempts - 1} with timeout {current_timeout}ms")
+
+                result = extract_tables_with_mistral(
+                    attempt_client, image_base64, page_num, model=model, custom_prompt=custom_prompt
+                )
+                break  # Success, exit retry loop
+
+            except Exception as e:
+                error_str = str(e).lower()
+                is_timeout = "timeout" in error_str or "timed out" in error_str
+                # Transient errors that should be retried: 500, 503, 429
+                is_transient = "status 500" in error_str or "status 503" in error_str or "status 429" in error_str
+                # JSON parsing errors may indicate incomplete API response - retry
+                is_json_error = "json parsing failed" in error_str
+                is_retryable = is_timeout or is_transient or is_json_error
+
+                if is_retryable and attempt < max_attempts - 1:
+                    # Retryable error and we have more attempts - continue to retry
+                    if is_timeout:
+                        logger.warning(f"  Request timed out after {current_timeout}ms")
+                    elif is_json_error:
+                        logger.warning(f"  Malformed JSON response (will retry with longer timeout)")
+                    else:
+                        logger.warning(f"  Transient API error (will retry): {e}")
+                    continue
+                elif is_retryable:
+                    # Retryable error on final attempt
+                    logger.error(f"  All retry attempts failed after {current_timeout}ms")
+                    logger.error(f"  Failed to extract tables from page {page_num + 1}: {e}")
+                    failed_pages.append(page_num + 1)
+                    break
+                else:
+                    # Non-retryable error - skip retry
+                    logger.error(f"  Failed to extract tables from page {page_num + 1}: {e}")
+                    failed_pages.append(page_num + 1)
+                    break
+
+        if result is None:
+            continue  # Skip to next page
 
         # Process tables
         for i, table_data in enumerate(result.get("tables", [])):
@@ -261,6 +360,12 @@ def extract_tables(
 
     doc.close()
 
+    # Log statistics
+    successful_pages = len(page_list) - len(failed_pages)
+    logger.info(f"Statistics: {successful_pages}/{len(page_list)} pages processed successfully")
+    if failed_pages:
+        logger.warning(f"Failed pages: {', '.join(map(str, failed_pages))}")
+
     # Merge all tables if requested
     if merge_output and all_dataframes:
         # Standardize column names before merge to handle variations
@@ -268,8 +373,20 @@ def extract_tables(
         for df in all_dataframes:
             df.columns = df.columns.str.replace(" ", "_")
 
-        merged_df = pd.concat(all_dataframes, ignore_index=True)
-        merged_df = merged_df.sort_values("page", kind="stable").reset_index(drop=True)
+        # Sort dataframes by page number using natural sort
+        # Load all CSVs with natural sorting
+        all_csv_files = sorted(
+            list(output_dir.glob(f"{pdf_path.stem}_page*.csv")),
+            key=natural_sort_key
+        )
+        
+        sorted_dataframes = []
+        for csv_file in all_csv_files:
+            df = pd.read_csv(csv_file, encoding="utf-8-sig")
+            df.columns = df.columns.str.replace(" ", "_")
+            sorted_dataframes.append(df)
+        
+        merged_df = pd.concat(sorted_dataframes, ignore_index=True)
 
         merged_file = output_dir / f"{pdf_path.stem}_merged.csv"
         merged_df.to_csv(merged_file, index=False, encoding="utf-8-sig")
