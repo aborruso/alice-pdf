@@ -1,0 +1,49 @@
+# Table schema for edilizia-residenziale_comune_2024.pdf
+# Housing properties table with ownership and status information
+
+name: "edilizia_residenziale"
+description: "Housing properties table with ownership and status information"
+
+columns:
+  - name: "PROPRIETA"
+    description: "Property owner name"
+    examples:
+      - "ATER DI VENEZIA"
+      - "COMUNE DI VENEZIA"
+
+  - name: "ERP"
+    description: "Yes/No indicator"
+    examples:
+      - "SI"
+      - "NO"
+
+  - name: "ALLOGGIO"
+    description: "Housing unit number (numeric code)"
+    examples:
+      - "2950010"
+      - "170"
+
+  - name: "INDIRIZZO"
+    description: "Full address (street, city, postal code)"
+    examples:
+      - "VIA ADOLFO ORTOLAN, 1, 30175 MARGHERA-VENEZIA (VE) ITALIA"
+      - "SAN MARCO, 584 30124 VENEZIA (VE)"
+
+  - name: "STATO"
+    description: "Status"
+    examples:
+      - "Affittata"
+      - "Sfitto"
+      - "Sfitta"
+
+  - name: "TOTALE_PERCEPITO"
+    description: "Total amount received (numeric, may include decimals with comma)"
+    examples:
+      - "452,9"
+      - "4789,91"
+      - "0"
+
+notes:
+  - "Keep property name and ERP indicator as SEPARATE columns"
+  - "Do NOT merge adjacent cells"
+  - "All rows should have exactly 6 columns"

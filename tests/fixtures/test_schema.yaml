@@ -1,0 +1,25 @@
+name: "test_table"
+description: "Test table schema"
+
+columns:
+  - name: "ID"
+    description: "Identifier"
+    examples:
+      - "001"
+      - "002"
+
+  - name: "NAME"
+    description: "Name field"
+    examples:
+      - "John Doe"
+      - "Jane Smith"
+
+  - name: "VALUE"
+    description: "Numeric value"
+    examples:
+      - "100.5"
+      - "250.75"
+
+notes:
+  - "Keep all columns separate"
+  - "All rows must have 3 columns"
