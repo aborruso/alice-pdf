@@ -10,10 +10,12 @@ from pathlib import Path
 from io import BytesIO
 import json
 import time
+import shutil
 
 import fitz  # PyMuPDF
 from PIL import Image
 from mistralai import Mistral
+from mistralai.utils.retries import BackoffStrategy, RetryConfig
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -142,6 +144,7 @@ def extract_tables(
     dpi=150,
     merge_output=False,
     custom_prompt=None,
+    timeout_ms=90_000,
 ):
     """
     Extract tables from PDF using Mistral OCR.
@@ -171,8 +174,16 @@ def extract_tables(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize Mistral client
-    client = Mistral(api_key=api_key)
+    # Initialize Mistral client with bounded timeout and retries to avoid hanging requests
+    backoff = BackoffStrategy(
+        initial_interval=2, max_interval=20, exponent=2, max_elapsed_time=timeout_ms // 1000
+    )
+    retry_config = RetryConfig(
+        strategy="exponential",
+        backoff=backoff,
+        retry_connection_errors=True,
+    )
+    client = Mistral(api_key=api_key, timeout_ms=timeout_ms, retry_config=retry_config)
 
     # Open PDF
     doc = fitz.open(pdf_path)
@@ -205,7 +216,11 @@ def extract_tables(
         logger.info(f"Processing page {page_num + 1} ({idx}/{len(page_list)})")
 
         # Convert page to image
-        image_base64 = pdf_page_to_base64(pdf_path, page_num, dpi=dpi)
+        try:
+            image_base64 = pdf_page_to_base64(pdf_path, page_num, dpi=dpi)
+        except Exception as e:
+            logger.error(f"  Failed to render page {page_num + 1}: {e}")
+            continue
 
         # Extract tables using Mistral
         result = extract_tables_with_mistral(
