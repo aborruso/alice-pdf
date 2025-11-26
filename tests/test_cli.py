@@ -40,7 +40,7 @@ def test_cli_version():
 def test_cli_missing_api_key(mock_extract_tables):
     """Test error when API key is missing."""
     with patch.object(sys, 'argv', ['alice-pdf', 'test.pdf', 'output/']), \
-         patch.dict('os.environ', {}, clear=True):
+         patch.dict('os.environ', {'ALICE_PDF_IGNORE_ENV': '1'}, clear=True):
         result = main()
         assert result == 1
         mock_extract_tables.assert_not_called()
