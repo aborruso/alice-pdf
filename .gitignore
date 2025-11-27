@@ -42,6 +42,11 @@ output/
 *.csv
 .env
 
+# Cache directories
+.ruff_cache/
+.uv-cache/
+.uvcache/
+
 # Keep sample schemas
 !sample/
 
