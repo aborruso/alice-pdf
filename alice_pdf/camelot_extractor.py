@@ -57,7 +57,7 @@ def make_unique_columns(columns):
         cols.loc[duplicates_idx] = [
             f"{dup}_{i}" if i != 0 else dup for i in range(len(duplicates_idx))
         ]
-    return cols
+    return cols.tolist()  # Return list to avoid Series index issues
 
 
 def merge_wrapped_rows(df, max_non_null=2):
@@ -119,7 +119,13 @@ def merge_wrapped_rows(df, max_non_null=2):
 
         merged_rows.append(row)
 
-    return pd.DataFrame(merged_rows).reset_index(drop=True)
+    # Convert to DataFrame using values (not Series) to avoid duplicate index issues
+    # Use .values to get raw numpy array without column name information
+    if merged_rows:
+        result_df = pd.DataFrame([row.values for row in merged_rows], columns=df.columns)
+        return result_df.reset_index(drop=True)
+    else:
+        return df.iloc[:0].copy()  # Return empty DataFrame with same columns
 
 
 def extract_tables_with_camelot(
@@ -233,9 +239,11 @@ def extract_tables_with_camelot(
                 df = df[1:].reset_index(drop=True)
 
             # Ensure columns are unique before row-level operations
+            # This must be done BEFORE merge_wrapped_rows since that function
+            # relies on df.columns when reconstructing the DataFrame
             df.columns = make_unique_columns(df.columns)
 
-            # Merge wrapped rows AFTER removing header
+            # Merge wrapped rows AFTER removing header and ensuring unique columns
             df = merge_wrapped_rows(df)
 
             # Add page column
@@ -261,6 +269,8 @@ def extract_tables_with_camelot(
 
     except Exception as e:
         logger.error(f"Camelot extraction failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise
 
     # Merge all tables if requested
@@ -273,17 +283,22 @@ def extract_tables_with_camelot(
         normalized_frames = []
         for df in all_dataframes:
             df = df.copy()
-            # Realign by index, ignoring header labels that may be missing/duplicated
-            df.columns = range(len(df.columns))
 
+            # Ensure unique columns first to avoid reindex issues
+            df.columns = make_unique_columns(df.columns)
+
+            # Pad or truncate to match max_cols
             if len(df.columns) < max_cols:
-                df = df.reindex(columns=range(max_cols))
+                # Add missing columns with NaN values
+                for i in range(len(df.columns), max_cols):
+                    df[f"_pad_{i}"] = pd.NA
             elif len(df.columns) > max_cols:
                 logger.warning(
                     f"Column count mismatch: expected {max_cols}, got {len(df.columns)}; truncating extra columns"
                 )
                 df = df.iloc[:, :max_cols]
 
+            # Now assign standardized column names
             df.columns = col_names
             normalized_frames.append(df)
 
