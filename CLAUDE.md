@@ -23,40 +23,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Alice PDF is a CLI tool for extracting tables from PDFs using Mistral OCR (Pixtral vision model). It converts PDF pages to images at specified DPI, sends them to Mistral API with custom prompts, and outputs CSV files.
+Alice PDF is a CLI tool for extracting tables from PDFs using three engines: Camelot (default, free), Mistral OCR (Pixtral vision model), or AWS Textract. It converts PDF pages to images at specified DPI (for Mistral/Textract) or processes native PDF structure (for Camelot), and outputs CSV files.
 
 Core workflow:
 
-1. PDF → temp raster copy at 150 DPI
+1. PDF → image conversion at 150 DPI (Mistral/Textract) OR native structure parsing (Camelot)
 2. Process selected pages (ranges or lists)
-3. Send to Mistral API with optional YAML schema describing table structure
+3. Send to API or process locally with optional YAML schema (Mistral only)
 4. Get CSV per page + optional merged output
 
 ## Engines
 
-- `mistral` (default): OCR via Pixtral vision. Supports `--schema` and `--prompt`.
-- `textract`: AWS Textract. Needs AWS creds via env or flags (`--aws-region`, `--aws-access-key-id`, `--aws-secret-access-key`).
-- `camelot`: Native PDF tables. Use `--camelot-flavor {lattice,stream}`; blocked on scanned PDFs (no extractable text).
+- `camelot` (default): Local, free extraction for native PDFs. Use `--camelot-flavor {lattice,stream}`. Does NOT work on scanned PDFs (requires extractable text).
+- `mistral`: OCR via Pixtral vision for scanned PDFs. Supports `--schema` and `--prompt`. Requires MISTRAL_API_KEY.
+- `textract`: AWS Textract for managed extraction. Needs AWS creds via env or flags (`--aws-region`, `--aws-access-key-id`, `--aws-secret-access-key`).
+
+## Project Structure
+
+```
+alice-pdf/
+├── alice_pdf/          # Main package source code
+│   ├── cli.py          # CLI entry point and argument parsing
+│   ├── extractor.py    # Mistral engine implementation
+│   ├── textract_extractor.py  # AWS Textract engine
+│   ├── camelot_extractor.py   # Camelot engine
+│   └── prompt_generator.py    # YAML schema to prompt converter
+├── docs/               # Documentation
+│   └── best-practices.md  # Comprehensive usage guide
+├── sample/             # Example PDFs and schemas
+│   ├── *.pdf           # Sample PDF files for testing
+│   └── *.yaml          # Example table schemas (e.g., canoni_schema.yaml)
+├── openspec/           # OpenSpec specifications
+│   ├── AGENTS.md       # Agent instructions for proposals
+│   └── specs/          # Change proposals and documentation
+├── tests/              # Unit tests
+└── tmp/                # Temporary test outputs (gitignored)
+```
+
+**Key directories:**
+
+- `alice_pdf/`: Core library code with three extraction engines
+- `docs/`: User guides including best-practices.md (engine selection, YAML schemas, troubleshooting)
+- `sample/`: Example PDFs and YAML schemas for testing extractions
+- `openspec/`: Project specifications using OpenSpec format for change management
+- `tmp/`: Use this for temporary test outputs (not tracked in git)
 
 ## Commands
 
 ### Running the tool
 
 ```bash
-# Basic usage (requires MISTRAL_API_KEY env var)
+# Basic usage with Camelot (default, free, no API key)
 alice-pdf input.pdf output/
 
 # Specific pages
 alice-pdf input.pdf output/ --pages "1-3,5"
 
-# With custom schema for better accuracy
-alice-pdf input.pdf output/ --schema table_schema.yaml
+# Camelot stream mode for tables without borders
+alice-pdf input.pdf output/ --camelot-flavor stream
 
-# Textract engine (example)
+# Mistral engine for scanned PDFs (requires MISTRAL_API_KEY env var)
+alice-pdf input.pdf output/ --engine mistral
+
+# Mistral with custom schema for better accuracy
+alice-pdf input.pdf output/ --engine mistral --schema table_schema.yaml
+
+# Textract engine
 alice-pdf input.pdf output/ --engine textract --aws-region eu-west-1
-
-# Camelot stream mode
-alice-pdf input.pdf output/ --engine camelot --camelot-flavor stream
 
 # Merge all tables into one CSV
 alice-pdf input.pdf output/ --merge
