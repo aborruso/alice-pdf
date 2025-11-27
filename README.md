@@ -273,6 +273,36 @@ alice-pdf document.pdf output/ \
 - You want local, free extraction (no API costs)
 - Speed is critical for simple PDFs
 
+## Project Structure
+
+```
+alice-pdf/
+├── alice_pdf/          # Main package source code
+│   ├── cli.py          # CLI entry point and argument parsing
+│   ├── extractor.py    # Mistral engine implementation
+│   ├── textract_extractor.py  # AWS Textract engine
+│   ├── camelot_extractor.py   # Camelot engine
+│   └── prompt_generator.py    # YAML schema to prompt converter
+├── docs/               # Documentation
+│   └── best-practices.md  # Comprehensive usage guide
+├── sample/             # Example PDFs and schemas
+│   ├── *.pdf           # Sample PDF files for testing
+│   └── *.yaml          # Example table schemas
+├── openspec/           # OpenSpec specifications
+│   ├── AGENTS.md       # Agent instructions
+│   └── specs/          # Change proposals and documentation
+├── tests/              # Unit tests
+└── tmp/                # Temporary test outputs (gitignored)
+```
+
+**Key directories:**
+
+- `alice_pdf/`: Core library code
+- `docs/`: User guides and best practices
+- `sample/`: Example files and schemas for testing
+- `openspec/`: Project specifications using OpenSpec format
+- `tmp/`: Temporary directory for test outputs (not tracked in git)
+
 ## License
 
 MIT License - Copyright (c) 2025 Andrea Borruso <aborruso@gmail.com>
