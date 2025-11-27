@@ -1,0 +1,77 @@
+# Schema per tabella canoni di locazione
+# Table schema for rental fees/lease payments
+
+name: "canoni_locazione"
+description: "Rental fees and lease contract information table"
+
+columns:
+  - name: "TIPO_CANONE"
+    description: "Type of rental fee (percepito/corrisposto)"
+    examples:
+      - "percepito"
+      - "corrisposto"
+
+  - name: "INFORMAZIONI_RENDEZVOUS"
+    description: "Information about meeting/reference date or period (often empty)"
+    examples:
+      - ""
+      - "gennaio 2024"
+
+  - name: "PIVA_CODFISC"
+    description: "VAT number or fiscal code of beneficiary (often empty, do NOT put € symbol here)"
+    examples:
+      - ""
+      - "12345678901"
+
+  - name: "IMPORTO"
+    description: "Amount in euros - MUST include € symbol and numeric value together"
+    examples:
+      - "€ 6.923,03"
+      - "€ 3.349,12"
+      - "€ 2.750,00"
+
+  - name: "ESTREMI_CONTRATTO"
+    description: "Contract reference (contract number, deed number, etc., often empty)"
+    examples:
+      - "Atto di subentro n. 16"
+      - "Contratto n. 21"
+      - ""
+
+  - name: "DATA_INIZIO"
+    description: "Start date of contract (DD/MM/YYYY format, often empty)"
+    examples:
+      - "30/11/2020"
+      - "12/06/2017"
+      - ""
+
+  - name: "DATA_FINE"
+    description: "End date of contract (DD/MM/YYYY format, often empty)"
+    examples:
+      - "28/02/2026"
+      - "11/06/2023"
+      - ""
+
+  - name: "IMMOBILE"
+    description: "Property description (address and type)"
+    examples:
+      - "Magazzino Via Felicia Impastato n. 13"
+      - "Magazzino Viale Rezzonico n. 40"
+
+  - name: "UFFICIO_REFERENTE"
+    description: "Reference office for the contract"
+    examples:
+      - "Area Patrimonio - Ufficio Demanio"
+      - "Settore Lavori Pubblici"
+
+  - name: "NOTE"
+    description: "Additional notes (often empty)"
+    examples:
+      - ""
+      - "Canone ridotto"
+
+notes:
+  - "CRITICAL: The IMPORTO column must contain BOTH the € symbol AND the numeric amount together (e.g., '€ 6.923,03')"
+  - "CRITICAL: Do NOT put the € symbol in the PIVA_CODFISC column - it belongs in IMPORTO"
+  - "Keep € symbol and amount as a single value in the IMPORTO column"
+  - "All rows must have exactly 10 columns"
+  - "Empty cells should be empty strings, not omitted"

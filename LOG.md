@@ -1,5 +1,23 @@
 # Changelog
 
+## 2025-11-27
+
+- Fix errore "columns passed, passed data had X columns"
+  - Aggiunto padding automatico per righe con meno colonne (riempite con stringhe vuote)
+  - Aggiunto trimming per righe con più colonne (colonne extra scartate)
+  - Warning quando righe vengono modificate per match con header
+  - Risolve crash quando API Mistral restituisce JSON con righe incomplete
+- Creato schema `sample/canoni_schema.yaml` per tabelle canoni locazione
+  - Schema corregge problema € symbol in colonna sbagliata
+  - Note critiche guidano API per corretta interpretazione IMPORTO
+  - Estrazione 100% accurata con schema vs errori senza
+- Creato `docs/best-practices.md` con guida completa (in inglese)
+  - Quando usare ciascun motore (Mistral/Textract/Camelot)
+  - Come scrivere schema YAML efficaci
+  - Troubleshooting problemi comuni
+  - Workflow raccomandato per progetti reali
+  - Esempi pratici e ottimizzazioni performance/costi
+
 ## 2025-11-26
 
 - Aggiunta funzione `merge_wrapped_rows()` per unire righe spezzate in output Camelot

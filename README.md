@@ -1,12 +1,12 @@
 # Alice PDF
 
-CLI tool to extract tables from PDFs using **Mistral OCR** (Pixtral vision model), **AWS Textract**, or **Camelot** and convert them to machine-readable CSV files.
+CLI tool to extract tables from PDFs using **Camelot** (default, free), **Mistral OCR** (Pixtral vision model), or **AWS Textract** and convert them to machine-readable CSV files.
 
 Dedicated to Alice Cortella, Marco Corona, and the entire onData community.
 
 ## Features
 
-- **Triple extraction engines**: Mistral (schema-driven), AWS Textract (managed), or Camelot (local, native PDFs)
+- **Triple extraction engines**: Camelot (free, local, native PDFs), Mistral (schema-driven, scanned PDFs), or AWS Textract (managed service)
 - Extract tables from multi-page PDFs
 - Support page selection (ranges or lists)
 - Optional YAML schema for improved extraction accuracy (Mistral only)
@@ -16,12 +16,10 @@ Dedicated to Alice Cortella, Marco Corona, and the entire onData community.
 ## Installation
 
 ```bash
+# Basic install (Camelot engine included)
 uv tool install alice-pdf
-```
 
-For all engines:
-
-```bash
+# With all engines
 uv tool install alice-pdf --with boto3 --with "camelot-py[cv]"
 ```
 
@@ -35,10 +33,17 @@ uv tool install . --with boto3 --with "camelot-py[cv]"
 
 ## Requirements
 
-**For Mistral engine (default):**
+**For Camelot engine (default, free):**
+
+- Python 3.8+
+- camelot-py[cv] library (included in basic install)
+- Works with native PDFs (not scanned images)
+
+**For Mistral engine:**
 
 - Python 3.8+
 - Mistral API key (https://console.mistral.ai/)
+- Best for scanned PDFs and complex tables
 
 **For Textract engine:**
 
@@ -46,16 +51,15 @@ uv tool install . --with boto3 --with "camelot-py[cv]"
 - AWS credentials with Textract permissions
 - boto3 library
 
-**For Camelot engine:**
-
-- Python 3.8+
-- camelot-py[cv] library (includes OpenCV)
-
 ## Usage
 
 ### Setup
 
-**Mistral (default):**
+**Camelot (default, no setup needed):**
+
+No API key required! Just install and use.
+
+**Mistral:**
 
 ```bash
 export MISTRAL_API_KEY="your-api-key"
@@ -72,8 +76,11 @@ export AWS_DEFAULT_REGION="eu-west-1"
 ### Basic commands
 
 ```bash
-# Extract with Mistral (default)
+# Extract with Camelot (default, free, no API)
 alice-pdf input.pdf output/
+
+# Extract with Mistral (for scanned PDFs)
+alice-pdf input.pdf output/ --engine mistral
 
 # Extract with Textract
 alice-pdf input.pdf output/ --engine textract --aws-region eu-west-1

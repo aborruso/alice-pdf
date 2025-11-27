@@ -337,7 +337,30 @@ def extract_tables(
 
             # Create DataFrame with headers if available
             if headers:
-                df = pd.DataFrame(rows, columns=headers)
+                # Pad or trim rows to match header count
+                num_cols = len(headers)
+                padded_rows = []
+                rows_padded = 0
+                rows_trimmed = 0
+                for row_idx, row in enumerate(rows):
+                    if len(row) < num_cols:
+                        # Pad with empty strings
+                        padded_row = row + [""] * (num_cols - len(row))
+                        padded_rows.append(padded_row)
+                        rows_padded += 1
+                    elif len(row) > num_cols:
+                        # Trim extra columns
+                        padded_rows.append(row[:num_cols])
+                        rows_trimmed += 1
+                    else:
+                        padded_rows.append(row)
+
+                if rows_padded > 0:
+                    logger.warning(f"  Table {i}: {rows_padded} rows had fewer columns than headers (padded with empty strings)")
+                if rows_trimmed > 0:
+                    logger.warning(f"  Table {i}: {rows_trimmed} rows had more columns than headers (extra columns discarded)")
+
+                df = pd.DataFrame(padded_rows, columns=headers)
             else:
                 df = pd.DataFrame(rows)
 

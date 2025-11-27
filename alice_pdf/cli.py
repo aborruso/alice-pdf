@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Alice PDF CLI - Extract tables from PDFs using Mistral OCR.
+Alice PDF CLI - Extract tables from PDFs using Camelot, Mistral OCR, or AWS Textract.
 """
 
 import sys
@@ -31,11 +31,11 @@ def main():
 
     parser = argparse.ArgumentParser(
         prog="alice-pdf",
-        description="Extract tables from PDFs using Mistral OCR",
+        description="Extract tables from PDFs using Camelot (default), Mistral OCR, or AWS Textract",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Extract all tables (requires MISTRAL_API_KEY env var)
+  # Extract all tables with Camelot (default, free, no API)
   alice-pdf input.pdf output/
 
   # Extract specific pages
@@ -44,11 +44,14 @@ Examples:
   # Merge all tables into one CSV
   alice-pdf input.pdf output/ --merge
 
-  # Use table schema for better accuracy
-  alice-pdf input.pdf output/ --schema table_schema.yaml
+  # Use Mistral for scanned PDFs (requires MISTRAL_API_KEY env var)
+  alice-pdf input.pdf output/ --engine mistral
 
-  # Use API key directly
-  alice-pdf input.pdf output/ --api-key "your-key-here"
+  # Use Mistral with table schema for better accuracy
+  alice-pdf input.pdf output/ --engine mistral --schema table_schema.yaml
+
+  # Use Camelot stream mode for tables without borders
+  alice-pdf input.pdf output/ --camelot-flavor stream
         """,
     )
 
@@ -59,8 +62,8 @@ Examples:
     parser.add_argument(
         "--engine",
         choices=["mistral", "textract", "camelot"],
-        default="mistral",
-        help="Extraction engine to use (default: mistral)",
+        default="camelot",
+        help="Extraction engine to use (default: camelot - free, no API required)",
     )
 
     # Common options
