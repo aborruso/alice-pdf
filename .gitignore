@@ -38,6 +38,7 @@ Thumbs.db
 
 # Project specific
 output/
+out/
 tmp/
 *.pdf
 *.csv
