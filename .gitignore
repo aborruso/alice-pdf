@@ -41,11 +41,13 @@ output/
 *.pdf
 *.csv
 .env
+test_*/
 
 # Cache directories
 .ruff_cache/
 .uv-cache/
 .uvcache/
+.pytest_cache/
 
 # Keep sample schemas
 !sample/
