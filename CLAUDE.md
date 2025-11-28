@@ -70,6 +70,22 @@ alice-pdf/
 
 ## Commands
 
+### OpenSpec
+
+```bash
+# List changes
+openspec list
+
+# List specs
+openspec list --specs
+
+# Show specific change or spec
+openspec show <item-name>
+
+# Validate change or spec
+openspec validate <item-name>
+```
+
 ### Running the tool
 
 ```bash
@@ -159,6 +175,54 @@ Template defining expected table structure:
 - `pyyaml`: Schema parsing
 
 Install with: `uv tool install alice-pdf` or for development: `uv tool install --editable .`
+
+## Versioning
+
+This project uses **Semantic Versioning (SemVer) automatico** con **Conventional Commits**:
+
+### Version Format: `MAJOR.MINOR.PATCH`
+
+- **MAJOR**: Breaking changes (non retrocompatibili)
+- **MINOR**: Nuove features (retrocompatibili)
+- **PATCH**: Bug fixes (retrocompatibili)
+
+### Conventional Commits
+
+```bash
+# Features (incrementa MINOR)
+git commit -m "feat: add hierarchical output support"
+git commit -m "feat(mistral): improve OCR accuracy"
+
+# Bug fixes (incrementa PATCH)
+git commit -m "fix: handle timeout errors gracefully"
+git commit -m "fix(camelot): resolve parsing edge cases"
+
+# Breaking changes (incrementa MAJOR)
+git commit -m "BREAKING: rename --api-key to --mistral-api-key"
+
+# Documentazione e manutenzione (non cambiano versione)
+git commit -m "docs: update installation guide"
+git commit -m "chore: upgrade dependencies"
+git commit -m "test: add integration tests"
+```
+
+### Automatic Release Setup
+
+Il progetto è configurato per versioning automatico tramite GitHub Actions:
+
+1. **Automatico su merge in `main`**: I commit triggerano analisi SemVer
+2. **Release GitHub**: Crea automaticamente tag e release notes
+3. **Changelog**: Generato automaticamente dai commit messaggi
+4. **Package version**: Aggiornata in `pyproject.toml` e `__init__.py`
+
+### Vantaggi
+
+- **Zero gestione manuale** delle versioni
+- **Release automatiche** senza intervento umano
+- **Changelog sempre aggiornato**
+- **Prevenzione errori** di versioning
+
+Per i developer: Seguire strictly le Conventional Commits per garantire versioning corretto.
 
 ## Key Design Decisions
 

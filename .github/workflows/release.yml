@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v2
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv pip install -e .
+          uv pip install semantic-release
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          semantic-release \
+            --ci \
+            --version-format="{version}" \
+            --major-on-zero \
+            --no-changelog \
+            --no-vcs-release \
+            --no-commit \
+            --tag-format="{version}" || true
+
+      - name: Update package version
+        id: version
+        run: |
+          # Get next version from semantic-release
+          NEXT_VERSION=$(semantic-release print-version --noop) || echo "0.1.1"
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+
+          # Update pyproject.toml
+          if [ -f pyproject.toml ]; then
+            sed -i "s/version = \".*\"/version = \"$NEXT_VERSION\"/" pyproject.toml
+          fi
+
+          # Update __init__.py
+          if [ -f alice_pdf/__init__.py ]; then
+            sed -i "s/__version__ = \".*\"/__version__ = \"$NEXT_VERSION\"/" alice_pdf/__init__.py
+          fi
+
+          # Update CLI
+          if [ -f alice_pdf/cli.py ]; then
+            sed -i "s/version=\"%(prog)s .*\"/version=\"%(prog)s $NEXT_VERSION\"/" alice_pdf/cli.py
+          fi
+
+      - name: Commit version changes
+        run: |
+          git add pyproject.toml alice_pdf/__init__.py alice_pdf/cli.py
+          git diff --staged --quiet || git commit -m "chore: update version to ${{ steps.version.outputs.version }}"
+
+      - name: Tag and Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create tag
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+
+          # Push changes and tag
+          git push origin main --follow-tags
+
+          # Create GitHub Release
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --target main
