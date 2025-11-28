@@ -2,6 +2,74 @@
 
 Comprehensive guide for optimal table extraction from PDFs.
 
+## Development Guidelines
+
+### Conventional Commits
+
+Per contribuire al progetto, usa i **Conventional Commits** per versioning automatico:
+
+```bash
+# Nuove funzionalità (incrementa MINOR)
+git commit -m "feat: add support for hierarchical table output"
+git commit -m "feat(mistral): implement retry mechanism for API timeouts"
+
+# Bug fixes (incrementa PATCH)
+git commit -m "fix: resolve CSV encoding issues with special characters"
+git commit -m "fix(camelot): handle tables without borders properly"
+
+# Breaking changes (incrementa MAJOR)
+git commit -m "BREAKING: rename --pdf-path to --input-file for consistency"
+
+# Documentazione (no cambio versione)
+git commit -m "docs: add migration guide for v2.0 breaking changes"
+git commit -m "docs(best-practices): update Conventional Commits section"
+
+# Manutenzione (no cambio versione)
+git commit -m "chore: upgrade dependencies to latest stable versions"
+git commit -m "chore: improve error messages for missing API keys"
+
+# Test (no cambio versione)
+git commit -m "test: add integration tests for all three engines"
+git commit -m "test: add edge case tests for malformed PDFs"
+```
+
+### Messaggi Commit Pattern
+
+```bash
+# Format: type[scope]: description
+
+# Types disponibili:
+feat:     # Nuove features
+fix:      # Bug fixes
+docs:     # Documentazione
+style:    # Formatting, style changes
+refactor: # Code refactoring
+test:     # Test aggiuntivi
+chore:    # Manutenzione, dependencies
+
+# Scope opzionale (engine interessato):
+feat(mistral): # Cambiamenti specifici a engine mistral
+fix(textract): # Bug fixes per textract
+feat(camelot): # Features per camelot
+feat(cli):     # Modifiche alla CLI
+```
+
+### Versioning Automatico
+
+Il progetto usa **Semantic Versioning (SemVer) automatico**:
+
+1. **Push su `main`** → GitHub Actions analizza i commit
+2. **Calcolo versione** → Basato su Conventional Commits
+3. **Release GitHub** → Creata automaticamente con changelog
+4. **Tag Git** → Applicato automaticamente
+
+**NON aggiornare manualmente** i numeri di versione in:
+- `pyproject.toml`
+- `alice_pdf/__init__.py`
+- `alice_pdf/cli.py`
+
+Vengono aggiornati automaticamente durante il processo di release.
+
 ## Choosing the Right Engine
 
 alice-pdf supports three extraction engines (`--engine`):
