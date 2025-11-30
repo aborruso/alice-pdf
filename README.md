@@ -177,6 +177,7 @@ alice-pdf input.pdf output/ --debug
 
 - `--pdfplumber-min-rows`: Minimum number of rows for table detection (default: 1)
 - `--pdfplumber-min-cols`: Minimum number of columns for table detection (default: 1)
+- `--pdfplumber-strip-text` / `--no-pdfplumber-strip-text`: Enable/disable whitespace stripping in extracted text (default: strip)
 
 ## Table Schema
 

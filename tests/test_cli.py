@@ -204,6 +204,27 @@ def test_cli_camelot_missing_dep_error():
         assert result == 1
 
 
+def test_cli_pdfplumber_strip_text_toggle():
+    """pdfplumber engine should honor --no-pdfplumber-strip-text."""
+    import types
+
+    mock_module = types.ModuleType('alice_pdf.pdfplumber_extractor')
+    mock_module.extract_tables_with_pdfplumber = Mock(return_value=1)
+
+    with patch.object(sys, 'argv', [
+        'alice-pdf',
+        'test.pdf',
+        'out/',
+        '--engine',
+        'pdfplumber',
+        '--no-pdfplumber-strip-text'
+    ]), patch.dict('sys.modules', {'alice_pdf.pdfplumber_extractor': mock_module}):
+        result = main()
+        assert result == 0
+        kwargs = mock_module.extract_tables_with_pdfplumber.call_args[1]
+        assert kwargs['strip_text'] is False
+
+
 def test_cli_with_pages_option(mock_extract_tables):
     """Test CLI with --pages option."""
     with patch.object(sys, 'argv', [

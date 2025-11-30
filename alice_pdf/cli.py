@@ -161,9 +161,16 @@ Examples:
     )
     parser.add_argument(
         "--pdfplumber-strip-text",
+        dest="pdfplumber_strip_text",
         action="store_true",
         default=True,
         help="Strip whitespace from extracted text (pdfplumber only, default: True)",
+    )
+    parser.add_argument(
+        "--no-pdfplumber-strip-text",
+        dest="pdfplumber_strip_text",
+        action="store_false",
+        help="Disable whitespace stripping in pdfplumber output",
     )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
 
@@ -209,7 +216,7 @@ Examples:
         if args.pdfplumber_min_cols != 1:
             pdfplumber_options.append("--pdfplumber-min-cols")
         if not args.pdfplumber_strip_text:
-            pdfplumber_options.append("--pdfplumber-strip-text")
+            pdfplumber_options.append("--no-pdfplumber-strip-text")
 
         if pdfplumber_options:
             logger.error(
@@ -250,7 +257,7 @@ Examples:
         if args.pdfplumber_min_cols != 1:
             pdfplumber_options.append("--pdfplumber-min-cols")
         if not args.pdfplumber_strip_text:
-            pdfplumber_options.append("--pdfplumber-strip-text")
+            pdfplumber_options.append("--no-pdfplumber-strip-text")
 
         if pdfplumber_options:
             logger.error(
@@ -296,7 +303,7 @@ Examples:
         if args.pdfplumber_min_cols != 1:
             pdfplumber_options.append("--pdfplumber-min-cols")
         if not args.pdfplumber_strip_text:
-            pdfplumber_options.append("--pdfplumber-strip-text")
+            pdfplumber_options.append("--no-pdfplumber-strip-text")
 
         if pdfplumber_options:
             logger.error(
