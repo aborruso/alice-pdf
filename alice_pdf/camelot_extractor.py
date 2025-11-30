@@ -135,6 +135,7 @@ def extract_tables_with_camelot(
     flavor="lattice",
     merge_output=False,
     resume=True,
+    split_text=False,
 ):
     """
     Extract tables from PDF using Camelot.
@@ -146,6 +147,7 @@ def extract_tables_with_camelot(
         flavor: Camelot flavor ('lattice' for bordered tables, 'stream' for non-bordered)
         merge_output: If True, merge all tables into single CSV
         resume: If True, skip pages that already have output files
+        split_text: If True, split text that spans multiple cells
 
     Returns:
         Number of tables extracted
@@ -198,6 +200,7 @@ def extract_tables_with_camelot(
             str(pdf_path),
             pages=pages_str,
             flavor=flavor,
+            split_text=split_text,
         )
 
         logger.info(f"Found {len(tables)} tables across pages")

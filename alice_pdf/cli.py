@@ -134,6 +134,11 @@ Examples:
         default="lattice",
         help="Camelot extraction mode: lattice (bordered tables) or stream (whitespace-based) (default: lattice)",
     )
+    parser.add_argument(
+        "--camelot-split-text",
+        action="store_true",
+        help="Split text that spans multiple cells (useful for complex tables with merged cells)",
+    )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
 
     args = parser.parse_args()
@@ -227,7 +232,7 @@ Examples:
             )
             return 1
 
-        # Get AWS credentials
+        # Get AWS credentials from environment or CLI args
         aws_access_key_id = args.aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = args.aws_secret_access_key or os.getenv("AWS_SECRET_ACCESS_KEY")
         aws_region = args.aws_region or os.getenv("AWS_DEFAULT_REGION")
@@ -272,6 +277,7 @@ Examples:
                 flavor=args.camelot_flavor,
                 merge_output=args.merge,
                 resume=not args.no_resume,
+                split_text=args.camelot_split_text,
             )
 
             logger.info(f"Extraction complete: {num_tables} tables processed")
