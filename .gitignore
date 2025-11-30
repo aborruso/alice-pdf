@@ -40,7 +40,6 @@ Thumbs.db
 out/
 tmp/
 planning/
-*.pdf
 *.csv
 .env
 test_*/
