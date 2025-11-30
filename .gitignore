@@ -43,6 +43,7 @@ planning/
 *.csv
 .env
 test_*/
+!docs/cli-tests/test_pag_1_5/**
 
 # Cache directories
 .ruff_cache/
