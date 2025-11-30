@@ -197,181 +197,49 @@ Examples:
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Validate engine-specific options
-    if args.engine == "textract":
-        mistral_options = []
-        if args.schema:
-            mistral_options.append("--schema")
-        if args.prompt:
-            mistral_options.append("--prompt")
-        if args.model != "pixtral-12b-2409":
-            mistral_options.append("--model")
-        if args.api_key or os.getenv("MISTRAL_API_KEY"):
-            if args.api_key:
-                mistral_options.append("--api-key")
+    # Shared validation to avoid diverging logic per engine
+    def used_options():
+        """Return per-engine lists of options actually used (non-default)."""
+        return {
+            "mistral": [
+                ("--schema", bool(args.schema)),
+                ("--prompt", bool(args.prompt)),
+                ("--model", args.model != "pixtral-12b-2409"),
+                ("--api-key", bool(args.api_key or os.getenv("MISTRAL_API_KEY"))),
+            ],
+            "textract": [
+                ("--aws-region", bool(args.aws_region)),
+                ("--aws-access-key-id", bool(args.aws_access_key_id)),
+                ("--aws-secret-access-key", bool(args.aws_secret_access_key)),
+            ],
+            "camelot": [
+                ("--camelot-flavor", args.camelot_flavor != "lattice"),
+                ("--camelot-split-text", args.camelot_split_text),
+            ],
+            "pdfplumber": [
+                ("--pdfplumber-min-rows", args.pdfplumber_min_rows != 1),
+                ("--pdfplumber-min-cols", args.pdfplumber_min_cols != 1),
+                ("--no-pdfplumber-strip-text", args.pdfplumber_strip_text is False),
+            ],
+        }
 
-        if mistral_options:
-            logger.error(
-                f"Options {', '.join(mistral_options)} are only compatible with --engine mistral"
-            )
-            return 1
+    def first_invalid_for(engine):
+        """Return first offending flag list for engines that don't match the selected one."""
+        options_map = used_options()
+        order = ["mistral", "textract", "camelot", "pdfplumber"]
+        for other in order:
+            if other == engine:
+                continue
+            invalid = [flag for flag, used in options_map[other] if used]
+            if invalid:
+                logger.error(
+                    f"Options {', '.join(invalid)} are only compatible with --engine {other}"
+                )
+                return False
+        return True
 
-        camelot_options = []
-        if args.camelot_flavor != "lattice":
-            camelot_options.append("--camelot-flavor")
-        if args.camelot_split_text:
-            camelot_options.append("--camelot-split-text")
-
-        if camelot_options:
-            logger.error(
-                f"Options {', '.join(camelot_options)} are only compatible with --engine camelot"
-            )
-            return 1
-
-        pdfplumber_options = []
-        if args.pdfplumber_min_rows != 1:
-            pdfplumber_options.append("--pdfplumber-min-rows")
-        if args.pdfplumber_min_cols != 1:
-            pdfplumber_options.append("--pdfplumber-min-cols")
-        if not args.pdfplumber_strip_text:
-            pdfplumber_options.append("--no-pdfplumber-strip-text")
-
-        if pdfplumber_options:
-            logger.error(
-                f"Options {', '.join(pdfplumber_options)} are only compatible with --engine pdfplumber"
-            )
-            return 1
-
-    elif args.engine == "mistral":
-        textract_options = []
-        if args.aws_region:
-            textract_options.append("--aws-region")
-        if args.aws_access_key_id:
-            textract_options.append("--aws-access-key-id")
-        if args.aws_secret_access_key:
-            textract_options.append("--aws-secret-access-key")
-
-        if textract_options:
-            logger.error(
-                f"Options {', '.join(textract_options)} are only compatible with --engine textract"
-            )
-            return 1
-
-        camelot_options = []
-        if args.camelot_flavor != "lattice":
-            camelot_options.append("--camelot-flavor")
-        if args.camelot_split_text:
-            camelot_options.append("--camelot-split-text")
-
-        if camelot_options:
-            logger.error(
-                f"Options {', '.join(camelot_options)} are only compatible with --engine camelot"
-            )
-            return 1
-
-        pdfplumber_options = []
-        if args.pdfplumber_min_rows != 1:
-            pdfplumber_options.append("--pdfplumber-min-rows")
-        if args.pdfplumber_min_cols != 1:
-            pdfplumber_options.append("--pdfplumber-min-cols")
-        if not args.pdfplumber_strip_text:
-            pdfplumber_options.append("--no-pdfplumber-strip-text")
-
-        if pdfplumber_options:
-            logger.error(
-                f"Options {', '.join(pdfplumber_options)} are only compatible with --engine pdfplumber"
-            )
-            return 1
-
-    elif args.engine == "camelot":
-        mistral_options = []
-        if args.schema:
-            mistral_options.append("--schema")
-        if args.prompt:
-            mistral_options.append("--prompt")
-        if args.model != "pixtral-12b-2409":
-            mistral_options.append("--model")
-        if args.api_key or os.getenv("MISTRAL_API_KEY"):
-            if args.api_key:
-                mistral_options.append("--api-key")
-
-        if mistral_options:
-            logger.error(
-                f"Options {', '.join(mistral_options)} are only compatible with --engine mistral"
-            )
-            return 1
-
-        textract_options = []
-        if args.aws_region:
-            textract_options.append("--aws-region")
-        if args.aws_access_key_id:
-            textract_options.append("--aws-access-key-id")
-        if args.aws_secret_access_key:
-            textract_options.append("--aws-secret-access-key")
-
-        if textract_options:
-            logger.error(
-                f"Options {', '.join(textract_options)} are only compatible with --engine textract"
-            )
-            return 1
-
-        pdfplumber_options = []
-        if args.pdfplumber_min_rows != 1:
-            pdfplumber_options.append("--pdfplumber-min-rows")
-        if args.pdfplumber_min_cols != 1:
-            pdfplumber_options.append("--pdfplumber-min-cols")
-        if not args.pdfplumber_strip_text:
-            pdfplumber_options.append("--no-pdfplumber-strip-text")
-
-        if pdfplumber_options:
-            logger.error(
-                f"Options {', '.join(pdfplumber_options)} are only compatible with --engine pdfplumber"
-            )
-            return 1
-
-    elif args.engine == "pdfplumber":
-        mistral_options = []
-        if args.schema:
-            mistral_options.append("--schema")
-        if args.prompt:
-            mistral_options.append("--prompt")
-        if args.model != "pixtral-12b-2409":
-            mistral_options.append("--model")
-        if args.api_key or os.getenv("MISTRAL_API_KEY"):
-            if args.api_key:
-                mistral_options.append("--api-key")
-
-        if mistral_options:
-            logger.error(
-                f"Options {', '.join(mistral_options)} are only compatible with --engine mistral"
-            )
-            return 1
-
-        textract_options = []
-        if args.aws_region:
-            textract_options.append("--aws-region")
-        if args.aws_access_key_id:
-            textract_options.append("--aws-access-key-id")
-        if args.aws_secret_access_key:
-            textract_options.append("--aws-secret-access-key")
-
-        if textract_options:
-            logger.error(
-                f"Options {', '.join(textract_options)} are only compatible with --engine textract"
-            )
-            return 1
-
-        camelot_options = []
-        if args.camelot_flavor != "lattice":
-            camelot_options.append("--camelot-flavor")
-        if args.camelot_split_text:
-            camelot_options.append("--camelot-split-text")
-
-        if camelot_options:
-            logger.error(
-                f"Options {', '.join(camelot_options)} are only compatible with --engine camelot"
-            )
-            return 1
+    if not first_invalid_for(args.engine):
+        return 1
 
     # Route to appropriate engine
     if args.engine == "mistral":
