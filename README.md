@@ -61,17 +61,42 @@ No API key required! Just install and use.
 
 **Mistral:**
 
+Option 1 - Environment variables (recommended for `uv run`):
 ```bash
 export MISTRAL_API_KEY="your-api-key"
 ```
 
+Option 2 - CLI parameters (recommended for `uv tool install`):
+```bash
+alice-pdf input.pdf output/ --engine mistral --api-key "your-api-key"
+```
+
+Option 3 - .env file (only works with `uv run`, not with `uv tool install`):
+```bash
+# Create .env file in project directory
+echo 'MISTRAL_API_KEY="your-api-key"' > .env
+uv run alice-pdf input.pdf output/ --engine mistral
+```
+
 **Textract:**
 
+Option 1 - Environment variables (recommended):
 ```bash
 export AWS_ACCESS_KEY_ID="your-key-id"
 export AWS_SECRET_ACCESS_KEY="your-secret-key"
 export AWS_DEFAULT_REGION="eu-west-1"
 ```
+
+Option 2 - CLI parameters:
+```bash
+alice-pdf input.pdf output/ --engine textract \
+  --aws-region eu-west-1 \
+  --aws-access-key-id "your-key-id" \
+  --aws-secret-access-key "your-secret-key"
+```
+
+**Note:** `.env` file support is only available for Mistral and only when running with `uv run`. 
+For Textract, always use environment variables or CLI parameters.
 
 ### Basic commands
 
@@ -87,6 +112,9 @@ alice-pdf input.pdf output/ --engine textract --aws-region eu-west-1
 
 # Extract with Camelot (local, fast for native PDFs)
 alice-pdf input.pdf output/ --engine camelot --camelot-flavor stream
+
+# Camelot: fix for tables with merged cells
+alice-pdf input.pdf output/ --engine camelot --camelot-split-text --merge
 
 # Specific pages
 alice-pdf input.pdf output/ --pages "1-3,5"
@@ -131,6 +159,7 @@ alice-pdf input.pdf output/ --debug
 - `--camelot-flavor {lattice,stream}`: Extraction mode (default: lattice)
   - `lattice`: For tables with visible borders
   - `stream`: For tables without borders (whitespace-based)
+- `--camelot-split-text`: Split text spanning multiple cells (useful for complex tables with merged cells)
 
 ## Table Schema
 
