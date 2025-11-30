@@ -68,6 +68,19 @@ Output: [`output/pdfplumber-basic/`](../../../output/pdfplumber-basic/)
 - Aggiunti spazi, come in "V e n e z i a" invece di "Venezia"
 - Per la seconda pagina non estrae diversi Id Cespite (molti NULL)
 
+### pdfplumber senza strip di spazi
+
+```bash
+alice-pdf sample/edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.pdf output/pdfplumber-no-strip/ --engine pdfplumber --no-pdfplumber-strip-text
+```
+
+Output: [`output/pdfplumber-no-strip/`](../../../output/pdfplumber-no-strip/)
+
+**Note:**
+
+- Disattiva lo `strip_text` di pdfplumber (può aiutare se serve mantenere spazi iniziali/finali nelle celle)
+- Restano eventuali spazi interni inseriti dall'OCR
+
 ### AWS Textract
 
 ```bash
