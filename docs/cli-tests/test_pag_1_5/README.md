@@ -58,7 +58,7 @@ Output: [`output/camelot-stream/`](../../../output/camelot-stream/)
 ### pdfplumber basic
 
 ```bash
-alice-pdf sample/edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.pdf output/pdfplumber-basic/ --engine pdfplumber
+alice-pdf sample/edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.pdf output/pdfplumber-basic/ --engine pdfplumber --pdfplumber-strip-text
 ```
 
 Output: [`output/pdfplumber-basic/`](../../../output/pdfplumber-basic/)
