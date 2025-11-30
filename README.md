@@ -1,8 +1,11 @@
 # Alice PDF
+[![PyPI](https://img.shields.io/pypi/v/alice-pdf.svg)](https://pypi.org/project/alice-pdf/)
 
 CLI tool to extract tables from PDFs using **Camelot** (default, free), **Mistral OCR** (Pixtral vision model), **AWS Textract**, or **pdfplumber** and convert them to machine-readable CSV files.
 
 Dedicated to Alice Corona e Marco Corona, and the entire onData community.
+
+![](assets/images/alice-pdf.jpg)
 
 ## Features
 
@@ -15,18 +18,21 @@ Dedicated to Alice Corona e Marco Corona, and the entire onData community.
 
 ## Installation
 
-First install `uv` (Python package manager):
+Prerequisites: Python 3.8+.
+
+Quick install (pip): `pip install -U alice-pdf`
+
+Install globally from PyPI (choose one):
+
+- `pip install alice-pdf`
+- `uv tool install alice-pdf` (requires [`uv`](https://docs.astral.sh/uv/getting-started/installation/))
+
+Upgrade to the latest release at any time:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-Then install alice-pdf:
-
-```bash
-git clone https://github.com/aborruso/alice-pdf.git
-cd alice-pdf
-uv tool install .
+pip install -U alice-pdf
+# or
+uv tool upgrade alice-pdf
 ```
 
 ## Requirements

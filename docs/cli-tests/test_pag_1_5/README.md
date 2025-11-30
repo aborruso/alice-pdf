@@ -6,24 +6,19 @@ Il file PDF di test è [`edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.p
 
 ## Installazione
 
-Se vuoi installare `alice-pdf` come cli, prima [installa uv](https://docs.astral.sh/uv/getting-started/installation/) (gestore di pacchetti Python veloce):
+Prerequisiti: Python 3.8+.
+
+Installa `alice-pdf` direttamente da PyPI (scegli una modalità):
+
+- `pip install alice-pdf`
+- `uv tool install alice-pdf` (serve prima [uv](https://docs.astral.sh/uv/getting-started/installation/))
+
+Aggiornamento all'ultima versione:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-Poi clona il repository e installa le dipendenze:
-
-```bash
-git clone <repository-url>
-cd alice-pdf
-uv sync
-```
-
-Oppure installa globalmente:
-
-```bash
-uv tool install .
+pip install -U alice-pdf
+# oppure
+uv tool upgrade alice-pdf
 ```
 
 **Nota**: Per usare Mistral e AWS Textract sono necessarie le rispettive API key.
