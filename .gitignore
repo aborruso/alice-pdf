@@ -56,3 +56,4 @@ test_*/
 
 # Windows Zone Identifiers
 *:Zone.Identifier
+.env
