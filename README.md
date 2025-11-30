@@ -1,12 +1,12 @@
 # Alice PDF
 
-CLI tool to extract tables from PDFs using **Camelot** (default, free), **Mistral OCR** (Pixtral vision model), or **AWS Textract** and convert them to machine-readable CSV files.
+CLI tool to extract tables from PDFs using **Camelot** (default, free), **Mistral OCR** (Pixtral vision model), **AWS Textract**, or **pdfplumber** and convert them to machine-readable CSV files.
 
 Dedicated to Alice Cortella, Marco Corona, and the entire onData community.
 
 ## Features
 
-- **Triple extraction engines**: Camelot (free, local, native PDFs), Mistral (schema-driven, scanned PDFs), or AWS Textract (managed service)
+- **Four extraction engines**: Camelot (free, local, native PDFs), Mistral (schema-driven, scanned PDFs), AWS Textract (managed service), or pdfplumber (robust, works on both native and scanned PDFs)
 - Extract tables from multi-page PDFs
 - Support page selection (ranges or lists)
 - Optional YAML schema for improved extraction accuracy (Mistral only)
@@ -44,6 +44,14 @@ uv tool install . --with boto3 --with "camelot-py[cv]"
 - Python 3.8+
 - Mistral API key (https://console.mistral.ai/)
 - Best for scanned PDFs and complex tables
+
+**For pdfplumber engine:**
+
+- Python 3.8+
+- pdfplumber library (install with: pip install pdfplumber)
+- Works on both native and scanned PDFs
+- Handles complex table structures better than Camelot
+- Free and local extraction
 
 **For Textract engine:**
 
@@ -109,6 +117,12 @@ alice-pdf input.pdf output/ --engine mistral
 
 # Extract with Textract
 alice-pdf input.pdf output/ --engine textract --aws-region eu-west-1
+
+# Extract with pdfplumber (robust, works on both native and scanned PDFs)
+alice-pdf input.pdf output/ --engine pdfplumber
+
+# Extract with pdfplumber with minimum table size constraints
+alice-pdf input.pdf output/ --engine pdfplumber --pdfplumber-min-rows 2 --pdfplumber-min-cols 3
 
 # Extract with Camelot (local, fast for native PDFs)
 alice-pdf input.pdf output/ --engine camelot --camelot-flavor stream

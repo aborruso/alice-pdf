@@ -31,7 +31,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         prog="alice-pdf",
-        description="Extract tables from PDFs using Camelot (default), Mistral OCR, or AWS Textract",
+        description="Extract tables from PDFs using Camelot (default), Mistral OCR, AWS Textract, or pdfplumber",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -52,6 +52,12 @@ Examples:
 
   # Use Camelot stream mode for tables without borders
   alice-pdf input.pdf output/ --camelot-flavor stream
+
+  # Use pdfplumber for robust free extraction (works on native and scanned PDFs)
+  alice-pdf input.pdf output/ --engine pdfplumber
+
+  # Use pdfplumber with minimum table size constraints
+  alice-pdf input.pdf output/ --engine pdfplumber --pdfplumber-min-rows 2 --pdfplumber-min-cols 3
         """,
     )
 
@@ -61,7 +67,7 @@ Examples:
     # Engine selection
     parser.add_argument(
         "--engine",
-        choices=["mistral", "textract", "camelot"],
+        choices=["mistral", "textract", "camelot", "pdfplumber"],
         default="camelot",
         help="Extraction engine to use (default: camelot - free, no API required)",
     )
@@ -139,6 +145,26 @@ Examples:
         action="store_true",
         help="Split text that spans multiple cells (useful for complex tables with merged cells)",
     )
+
+    # pdfplumber-specific options
+    parser.add_argument(
+        "--pdfplumber-min-rows",
+        type=int,
+        default=1,
+        help="Minimum number of rows for a table to be extracted (pdfplumber only, default: 1)",
+    )
+    parser.add_argument(
+        "--pdfplumber-min-cols",
+        type=int,
+        default=1,
+        help="Minimum number of columns for a table to be extracted (pdfplumber only, default: 1)",
+    )
+    parser.add_argument(
+        "--pdfplumber-strip-text",
+        action="store_true",
+        default=True,
+        help="Strip whitespace from extracted text (pdfplumber only, default: True)",
+    )
     parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
 
     args = parser.parse_args()
@@ -162,6 +188,163 @@ Examples:
         if mistral_options:
             logger.error(
                 f"Options {', '.join(mistral_options)} are only compatible with --engine mistral"
+            )
+            return 1
+
+        camelot_options = []
+        if args.camelot_flavor != "lattice":
+            camelot_options.append("--camelot-flavor")
+        if args.camelot_split_text:
+            camelot_options.append("--camelot-split-text")
+
+        if camelot_options:
+            logger.error(
+                f"Options {', '.join(camelot_options)} are only compatible with --engine camelot"
+            )
+            return 1
+
+        pdfplumber_options = []
+        if args.pdfplumber_min_rows != 1:
+            pdfplumber_options.append("--pdfplumber-min-rows")
+        if args.pdfplumber_min_cols != 1:
+            pdfplumber_options.append("--pdfplumber-min-cols")
+        if not args.pdfplumber_strip_text:
+            pdfplumber_options.append("--pdfplumber-strip-text")
+
+        if pdfplumber_options:
+            logger.error(
+                f"Options {', '.join(pdfplumber_options)} are only compatible with --engine pdfplumber"
+            )
+            return 1
+
+    elif args.engine == "mistral":
+        textract_options = []
+        if args.aws_region:
+            textract_options.append("--aws-region")
+        if args.aws_access_key_id:
+            textract_options.append("--aws-access-key-id")
+        if args.aws_secret_access_key:
+            textract_options.append("--aws-secret-access-key")
+
+        if textract_options:
+            logger.error(
+                f"Options {', '.join(textract_options)} are only compatible with --engine textract"
+            )
+            return 1
+
+        camelot_options = []
+        if args.camelot_flavor != "lattice":
+            camelot_options.append("--camelot-flavor")
+        if args.camelot_split_text:
+            camelot_options.append("--camelot-split-text")
+
+        if camelot_options:
+            logger.error(
+                f"Options {', '.join(camelot_options)} are only compatible with --engine camelot"
+            )
+            return 1
+
+        pdfplumber_options = []
+        if args.pdfplumber_min_rows != 1:
+            pdfplumber_options.append("--pdfplumber-min-rows")
+        if args.pdfplumber_min_cols != 1:
+            pdfplumber_options.append("--pdfplumber-min-cols")
+        if not args.pdfplumber_strip_text:
+            pdfplumber_options.append("--pdfplumber-strip-text")
+
+        if pdfplumber_options:
+            logger.error(
+                f"Options {', '.join(pdfplumber_options)} are only compatible with --engine pdfplumber"
+            )
+            return 1
+
+    elif args.engine == "camelot":
+        mistral_options = []
+        if args.schema:
+            mistral_options.append("--schema")
+        if args.prompt:
+            mistral_options.append("--prompt")
+        if args.model != "pixtral-12b-2409":
+            mistral_options.append("--model")
+        if args.api_key or os.getenv("MISTRAL_API_KEY"):
+            if args.api_key:
+                mistral_options.append("--api-key")
+
+        if mistral_options:
+            logger.error(
+                f"Options {', '.join(mistral_options)} are only compatible with --engine mistral"
+            )
+            return 1
+
+        textract_options = []
+        if args.aws_region:
+            textract_options.append("--aws-region")
+        if args.aws_access_key_id:
+            textract_options.append("--aws-access-key-id")
+        if args.aws_secret_access_key:
+            textract_options.append("--aws-secret-access-key")
+
+        if textract_options:
+            logger.error(
+                f"Options {', '.join(textract_options)} are only compatible with --engine textract"
+            )
+            return 1
+
+        pdfplumber_options = []
+        if args.pdfplumber_min_rows != 1:
+            pdfplumber_options.append("--pdfplumber-min-rows")
+        if args.pdfplumber_min_cols != 1:
+            pdfplumber_options.append("--pdfplumber-min-cols")
+        if not args.pdfplumber_strip_text:
+            pdfplumber_options.append("--pdfplumber-strip-text")
+
+        if pdfplumber_options:
+            logger.error(
+                f"Options {', '.join(pdfplumber_options)} are only compatible with --engine pdfplumber"
+            )
+            return 1
+
+    elif args.engine == "pdfplumber":
+        mistral_options = []
+        if args.schema:
+            mistral_options.append("--schema")
+        if args.prompt:
+            mistral_options.append("--prompt")
+        if args.model != "pixtral-12b-2409":
+            mistral_options.append("--model")
+        if args.api_key or os.getenv("MISTRAL_API_KEY"):
+            if args.api_key:
+                mistral_options.append("--api-key")
+
+        if mistral_options:
+            logger.error(
+                f"Options {', '.join(mistral_options)} are only compatible with --engine mistral"
+            )
+            return 1
+
+        textract_options = []
+        if args.aws_region:
+            textract_options.append("--aws-region")
+        if args.aws_access_key_id:
+            textract_options.append("--aws-access-key-id")
+        if args.aws_secret_access_key:
+            textract_options.append("--aws-secret-access-key")
+
+        if textract_options:
+            logger.error(
+                f"Options {', '.join(textract_options)} are only compatible with --engine textract"
+            )
+            return 1
+
+        camelot_options = []
+        if args.camelot_flavor != "lattice":
+            camelot_options.append("--camelot-flavor")
+        if args.camelot_split_text:
+            camelot_options.append("--camelot-split-text")
+
+        if camelot_options:
+            logger.error(
+                f"Options {', '.join(camelot_options)} are only compatible with --engine camelot"
             )
             return 1
 
@@ -278,6 +461,37 @@ Examples:
                 merge_output=args.merge,
                 resume=not args.no_resume,
                 split_text=args.camelot_split_text,
+            )
+
+            logger.info(f"Extraction complete: {num_tables} tables processed")
+            return 0
+
+        except Exception as e:
+            logger.error(f"Extraction failed: {e}")
+            if args.debug:
+                raise
+            return 1
+
+    elif args.engine == "pdfplumber":
+        # Import pdfplumber extractor
+        try:
+            from .pdfplumber_extractor import extract_tables_with_pdfplumber
+        except ImportError:
+            logger.error(
+                "pdfplumber support required. Install with: pip install pdfplumber"
+            )
+            return 1
+
+        try:
+            num_tables = extract_tables_with_pdfplumber(
+                pdf_path=args.pdf_path,
+                output_dir=args.output_dir,
+                pages=args.pages,
+                merge_output=args.merge,
+                resume=not args.no_resume,
+                min_rows=args.pdfplumber_min_rows,
+                min_cols=args.pdfplumber_min_cols,
+                strip_text=args.pdfplumber_strip_text,
             )
 
             logger.info(f"Extraction complete: {num_tables} tables processed")
