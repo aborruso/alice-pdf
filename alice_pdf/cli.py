@@ -176,6 +176,24 @@ Examples:
 
     args = parser.parse_args()
 
+    # Auto-switch to Mistral if user provides Mistral-specific options without setting --engine
+    if args.engine == "camelot":
+        mistral_triggers = any(
+            [
+                args.api_key,
+                os.getenv("MISTRAL_API_KEY"),
+                args.schema,
+                args.prompt,
+                args.model != "pixtral-12b-2409",
+            ]
+        )
+        if mistral_triggers:
+            logger.info(
+                "Detected Mistral options/credentials without --engine mistral; switching engine to mistral. "
+                "Use --engine camelot to force Camelot."
+            )
+            args.engine = "mistral"
+
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
