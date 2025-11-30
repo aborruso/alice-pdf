@@ -1,0 +1,226 @@
+# Table schema for test.pdf - ULTRA LITERAL MODE
+# Public housing properties inventory
+
+name: "immobili_residenza_publica"
+description: "Public housing properties inventory - EXTRACT EXACTLY what you SEE, cell by cell"
+
+# ============================================================================
+# CRITICAL EXTRACTION MODE: LITERAL OCR ONLY
+# ============================================================================
+extraction_mode: "LITERAL_OCR"
+
+extraction_rules:
+  - "YOU ARE AN OCR MACHINE - Copy EXACTLY what you see in each cell"
+  - "DO NOT think, DO NOT infer, DO NOT complete, DO NOT assume patterns"
+  - "DO NOT generate sequential numbers (1,2,3,4...)"
+  - "DO NOT guess missing values"
+  - "DO NOT copy from previous rows"
+  - "DO NOT interpolate or extrapolate"
+  - "ONLY transcribe the EXACT visible text character-by-character"
+  - "If a cell is empty, leave it EMPTY"
+  - "If you cannot read a cell clearly, copy what you CAN see"
+  - "Each cell is INDEPENDENT - no relationship between cells"
+  - "Row 1 has NO connection to Row 2 - treat each row as NEW"
+
+verification_rules:
+  - "After extracting, verify: Did I COPY or did I THINK?"
+  - "If you THOUGHT about what should be there, DELETE IT and re-read"
+  - "Only keep what your OCR literally reads from the image"
+
+columns:
+  - name: "Identificativo_UI"
+    description: "COPY the number visible in the FIRST data column, left side of the table"
+    extraction_instruction: "Look at the leftmost number. Type EXACTLY that number. Nothing else."
+    type: "text"
+    examples:
+      - "1"
+      - "2"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+      - "9"
+      - "10"
+      - "11"
+      - "16"
+      - "17"
+      - "18"
+      - "20"
+      - "21"
+      - "35"
+      - "36"
+    anti_pattern: "DO NOT write 1,2,3,4,5,6,7... (sequential). The numbers JUMP. Copy EACH visible number."
+
+  - name: "tipologia_UI"
+    description: "COPY the text after the ID number"
+    extraction_instruction: "Read the word next to the ID. Usually 'Fabbricato'. Copy it."
+    type: "text"
+    examples:
+      - "Fabbricato"
+
+  - name: "descrizione_UI"
+    description: "COPY the code starting with M."
+    extraction_instruction: "Find text like 'M.1590-1-ABITAZIONE ERP'. Copy EXACTLY as shown."
+    type: "text"
+    examples:
+      - "M.1590-1-ABITAZIONE ERP"
+      - "M.1600-2-ABITAZIONE ERP"
+      - "M.1770-4-ABITAZIONE ERP"
+      - "M.1780-5-ABITAZIONE ERP"
+
+  - name: "Id_Cespite"
+    description: "COPY the small number after the M. code"
+    extraction_instruction: "After the description, find a number (1, 3, 7, etc). Copy that EXACT number."
+    type: "text"
+    examples:
+      - "1"
+      - "1"
+      - "3"
+      - "3"
+      - "3"
+      - "7"
+      - "10"
+      - "12"
+      - "13"
+    anti_pattern: "This number REPEATS for multiple rows. Row 1 and Row 2 both have '1'. Copy what you SEE."
+
+  - name: "descrizione_Cespite"
+    description: "COPY the building description text"
+    extraction_instruction: "Read the longer text describing the building. May be on 2 lines. Copy all visible text."
+    type: "text"
+    examples:
+      - "Fabbricato residenziale bifamiliare - Campo Ruga"
+      - "Fabbricato residenziale bifamiliare - Campo Ruga"
+      - "Edificio residenziale - Castello Calle Salomon"
+
+  - name: "Comune"
+    description: "COPY the municipality name - usually bottom row under building description"
+    extraction_instruction: "Look for 'Venezia' or city name. It's often on the second line of the cell. Copy it."
+    type: "text"
+    examples:
+      - "Venezia"
+      - "Venezia"
+      - "Venezia"
+
+  - name: "Via"
+    description: "COPY the street name EXACTLY"
+    extraction_instruction: "Read the street name like 'CAMPO DE RUGA', 'RAMO SALOMON'. Copy with exact spacing and caps."
+    type: "text"
+    examples:
+      - "CAMPO DE RUGA"
+      - "CAMPO DE RUGA"
+      - "RAMO SALOMON"
+      - "RAMO SALOMON"
+      - "CALLE DEI NICOLI"
+
+  - name: "Civico"
+    description: "COPY the street number (may have letters)"
+    extraction_instruction: "Find the number after street name. Could be '143', '289', '1029B'. Copy EXACTLY."
+    type: "text"
+    examples:
+      - "143"
+      - "143"
+      - "289"
+      - "290"
+      - "292"
+      - "1029B"
+      - "1029C"
+
+  - name: "Quartiere"
+    description: "COPY the district text"
+    extraction_instruction: "Long text like 'SAN MARCO-CASTELLO-SANT'ELENA-CANNAREGIO'. Copy all visible."
+    type: "text"
+    examples:
+      - "SAN MARCO-CASTELLO-SANT'ELENA-CANNAREGIO"
+
+  - name: "sestiere"
+    description: "COPY the sestiere name"
+    extraction_instruction: "Usually 'CASTELLO' or similar. Copy what you see."
+    type: "text"
+    examples:
+      - "CASTELLO"
+      - "CASTELLO"
+      - ""
+
+  - name: "sezione"
+    description: "COPY the section code"
+    extraction_instruction: "Text like '01 - Venezia'. Copy with spaces and dash."
+    type: "text"
+    examples:
+      - "01 - Venezia"
+
+  - name: "Foglio"
+    description: "COPY the map sheet number visible in the cell"
+    extraction_instruction: "Usually '16'. Read what's in THIS cell, THIS row."
+    type: "text"
+    examples:
+      - "16"
+      - "16"
+      - "16"
+    anti_pattern: "Each row may have different Foglio. Don't assume all are '16'. READ each cell."
+
+  - name: "Mapp"
+    description: "COPY the 4-digit map number visible in the cell"
+    extraction_instruction: "4-digit number like '3440', '3480', '4883'. Read carefully. Don't confuse similar numbers."
+    type: "text"
+    examples:
+      - "3440"
+      - "3440"
+      - "3480"
+      - "3480"
+      - "3753"
+      - "3954"
+      - "4883"
+    anti_pattern: "Numbers like 3480 and 3481 look similar. READ carefully each digit."
+
+  - name: "Sub"
+    description: "COPY the sub-parcel number visible in the cell"
+    extraction_instruction: "1 or 2 digit number after Mapp. Like '2', '3', '7'. Each row is DIFFERENT. Copy what you SEE."
+    type: "text"
+    examples:
+      - "2"
+      - "3"
+      - "7"
+      - "8"
+      - "10"
+      - "11"
+      - "12"
+      - "13"
+      - "14"
+      - "15"
+    anti_pattern: "DO NOT write sequential 1,2,3,4,5. Copy the EXACT visible number in each cell."
+
+  - name: "Uso_in_atto"
+    description: "COPY the usage text"
+    extraction_instruction: "Usually 'RESIDENZA;' with semicolon. Copy EXACTLY with punctuation."
+    type: "text"
+    examples:
+      - "RESIDENZA;"
+
+  - name: "Titolarita"
+    description: "COPY the ownership type"
+    extraction_instruction: "Usually 'Proprietà'. Copy with accented letters correctly."
+    type: "text"
+    examples:
+      - "Proprietà"
+
+# ============================================================================
+# FINAL INSTRUCTIONS
+# ============================================================================
+notes:
+  - "READ CELL BY CELL - Do not think about patterns"
+  - "First row ID is 1, second row ID is 2, third row ID is 4 (NOT 3!)"
+  - "Row IDs: 1,2,4,5,6,7,8,9,10,11,16,17,18,20,21,35,36,37,38..."
+  - "Some Id_Cespite repeat: multiple rows can have Id_Cespite=1"
+  - "Some Mapp repeat: multiple rows can have Mapp=3480"
+  - "If cell has 2 lines of text, copy BOTH lines with newline or space"
+  - "VERIFY after extraction: are numbers sequential? If yes, you FAILED - redo as OCR machine"
+
+# Example of what you should extract (first 3 rows):
+example_output: |
+  Row 1: ID=1, tipologia=Fabbricato, descrizione=M.1590-1-ABITAZIONE ERP, Id_Cespite=1, Comune=Venezia, Via=CAMPO DE RUGA, Civico=143, Mapp=3440, Sub=2
+  Row 2: ID=2, tipologia=Fabbricato, descrizione=M.1600-2-ABITAZIONE ERP, Id_Cespite=1, Comune=Venezia, Via=CAMPO DE RUGA, Civico=143, Mapp=3440, Sub=3
+  Row 3: ID=4, tipologia=Fabbricato, descrizione=M.1770-4-ABITAZIONE ERP, Id_Cespite=3, Comune=Venezia, Via=RAMO SALOMON, Civico=289, Mapp=3480, Sub=7
+  
+  Notice: Row 3 ID is 4 (not 3!), Id_Cespite is 3 (different from Row 2), Mapp is 3480 (not 3440)
