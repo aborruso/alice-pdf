@@ -1,6 +1,6 @@
 # Test pagine 1-5
 
-File di test deriva dall'estrazione di pagina 1 e 5 di `sample/edilizia-residenziale_comune_2024_PATRIMONIO.pdf`
+Il file PDF di test è [`edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.pdf`](../../../sample/edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.pdf), che deriva dall'estrazione di pagina 1 e 5 di [`sample/edilizia-residenziale_comune_2024_PATRIMONIO.pdf`](../../../sample/edilizia-residenziale_comune_2024_PATRIMONIO.pdf).
 
 *I path sono relativi alla root del repository*
 
