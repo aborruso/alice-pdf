@@ -51,6 +51,17 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - PRs should describe motivation, key changes, and testing performed; link issues when available.  
 - For UI/CLI changes, paste example commands and resulting output snippet; for behavior changes, note compatibility (e.g., default DPI/model).
 
+## Release Checklist (PyPI + GitHub tag/release)
+- Bump version in `pyproject.toml` **and** `alice_pdf/__init__.py` (keep them in sync).
+- Clean build artifacts: `rm -rf dist build *.egg-info`.
+- Build sdist+wheel: `python3 -m build` (or `uv build`).
+- Sanity check: `python3 -m twine check dist/*`.
+- Publish to PyPI: `python3 -m twine upload dist/*` (or `--repository testpypi` first).
+- Update docs/examples for install/flags if changed (README, docs/cli-tests/*).
+- Commit release changes (version, docs, CLI flags) with a message like `release: X.Y.Z`.
+- Tag annotated: `git tag -a vX.Y.Z -m "Release X.Y.Z"` and push main + tags.
+- Create GitHub Release from the tag (e.g., `gh release create vX.Y.Z --title "vX.Y.Z" --notes "…"`).
+
 ## Security & Configuration Tips
 - Never commit secrets; load Mistral API keys via `MISTRAL_API_KEY` env var or `--api-key`.  
 - `.env` is optional for local dev; keep it gitignored.  

@@ -36,3 +36,11 @@
 - Fix bug chiusura documento PDF in `textract_extractor.py`
 - Aggiornato README con esempi dual-engine
 - Pulizia script di test temporanei
+
+## 2025-11-30
+
+- Release 0.1.1
+  - Pubblicata su PyPI
+  - Aggiunto alias CLI `--mistral-api-key` per passare la chiave Mistral
+  - Documentazione: installazione diretta da PyPI (pip/uv), quick upgrade commands
+  - Aggiunta checklist di rilascio in `AGENTS.md`; `.venv` ignorata nel `.gitignore`
