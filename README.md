@@ -81,6 +81,7 @@ export MISTRAL_API_KEY="your-api-key"
 Option 2 - CLI parameters (recommended for `uv tool install`):
 ```bash
 alice-pdf input.pdf output/ --engine mistral --api-key "your-api-key"
+# alias: --mistral-api-key
 ```
 
 Option 3 - .env file (only works with `uv run`, not with `uv tool install`):

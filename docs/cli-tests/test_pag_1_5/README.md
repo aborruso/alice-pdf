@@ -93,6 +93,7 @@ Output: [`output/textract-basic/`](../../../output/textract-basic/)
 
 ```bash
 alice-pdf sample/edilizia-residenziale_comune_2024_PATRIMONIO_pages1-5.pdf output/mistral-schema/ --engine mistral --api-key xxx --schema sample/test.yaml
+# alias: --mistral-api-key
 ```
 
 Output: [`output/mistral-schema/`](../../../output/mistral-schema/) (completato con schema)

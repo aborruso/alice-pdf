@@ -95,7 +95,10 @@ Examples:
 
     # Mistral-specific options
     parser.add_argument(
-        "--api-key", help="Mistral API key (or set MISTRAL_API_KEY env var)"
+        "--api-key",
+        "--mistral-api-key",
+        dest="api_key",
+        help="Mistral API key (or set MISTRAL_API_KEY env var)",
     )
     parser.add_argument(
         "--model",
