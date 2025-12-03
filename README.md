@@ -108,6 +108,8 @@ alice-pdf input.pdf output/ --engine textract \
   --aws-secret-access-key "your-secret-key"
 ```
 
+Costi: il motore Textract qui usa solo `FeatureTypes=["TABLES"]` per tenere il costo a ~0,015 USD/pagina. Il feature FORMS (~0,050 USD/pagina) non è abilitato.
+
 **Note:** `.env` file support is only available for Mistral and only when running with `uv run`.
 For Textract, always use environment variables or CLI parameters.
 

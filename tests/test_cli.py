@@ -166,7 +166,8 @@ def test_cli_camelot_stream_routes():
 
     with patch.object(sys, 'argv', [
         'alice-pdf', 'test.pdf', 'out/', '--engine', 'camelot', '--camelot-flavor', 'stream'
-    ]), patch.dict('sys.modules', {'alice_pdf.camelot_extractor': mock_module}):
+    ]), patch.dict('sys.modules', {'alice_pdf.camelot_extractor': mock_module}), \
+         patch.dict('os.environ', {'MISTRAL_API_KEY': ''}, clear=False):
         result = main()
         assert result == 0
         kwargs = mock_module.extract_tables_with_camelot.call_args[1]
@@ -182,7 +183,8 @@ def test_cli_camelot_lattice_default():
 
     with patch.object(sys, 'argv', [
         'alice-pdf', 'test.pdf', 'out/', '--engine', 'camelot'
-    ]), patch.dict('sys.modules', {'alice_pdf.camelot_extractor': mock_module}):
+    ]), patch.dict('sys.modules', {'alice_pdf.camelot_extractor': mock_module}), \
+         patch.dict('os.environ', {'MISTRAL_API_KEY': ''}, clear=False):
         result = main()
         assert result == 0
         kwargs = mock_module.extract_tables_with_camelot.call_args[1]
@@ -218,7 +220,8 @@ def test_cli_pdfplumber_strip_text_toggle():
         '--engine',
         'pdfplumber',
         '--no-pdfplumber-strip-text'
-    ]), patch.dict('sys.modules', {'alice_pdf.pdfplumber_extractor': mock_module}):
+    ]), patch.dict('sys.modules', {'alice_pdf.pdfplumber_extractor': mock_module}), \
+         patch.dict('os.environ', {'MISTRAL_API_KEY': ''}, clear=False):
         result = main()
         assert result == 0
         kwargs = mock_module.extract_tables_with_pdfplumber.call_args[1]

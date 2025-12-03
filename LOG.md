@@ -1,5 +1,23 @@
 # Changelog
 
+## 2025-12-03
+
+- Fix dependency resolution: requires-python >=3.9 (era >=3.8)
+  - Risolve conflitto pdfplumber/camelot-py con pdfminer-six
+  - Rimosso Python 3.8 da classifiers pyproject.toml
+- Fix test suite: 41/41 test passano
+  - Mock MISTRAL_API_KEY env var in test camelot/pdfplumber per evitare auto-switch engine
+  - Risolve fallimenti test_cli_camelot_stream_routes, test_cli_camelot_lattice_default, test_cli_pdfplumber_strip_text_toggle
+- Textract: rimosso `FORMS` da `FeatureTypes` (ora solo `TABLES`) per ridurre il costo a ~0,015 USD/pagina; aggiornato README con nota sui costi
+
+## 2025-11-30
+
+- Release 0.1.1
+  - Pubblicata su PyPI
+  - Aggiunto alias CLI `--mistral-api-key` per passare la chiave Mistral
+  - Documentazione: installazione diretta da PyPI (pip/uv), quick upgrade commands
+  - Aggiunta checklist di rilascio in `AGENTS.md`; `.venv` ignorata nel `.gitignore`
+
 ## 2025-11-27
 
 - Fix errore "columns passed, passed data had X columns"
@@ -36,11 +54,3 @@
 - Fix bug chiusura documento PDF in `textract_extractor.py`
 - Aggiornato README con esempi dual-engine
 - Pulizia script di test temporanei
-
-## 2025-11-30
-
-- Release 0.1.1
-  - Pubblicata su PyPI
-  - Aggiunto alias CLI `--mistral-api-key` per passare la chiave Mistral
-  - Documentazione: installazione diretta da PyPI (pip/uv), quick upgrade commands
-  - Aggiunta checklist di rilascio in `AGENTS.md`; `.venv` ignorata nel `.gitignore`

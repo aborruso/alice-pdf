@@ -97,9 +97,10 @@ def extract_tables_with_textract_api(
 
     try:
         # Enhanced table detection with multiple feature types
+        # Use only TABLES feature to reduce cost; FORMS is ~3x more expensive and not needed here
         response = textract_client.analyze_document(
             Document={"Bytes": image_bytes},
-            FeatureTypes=["TABLES", "FORMS"],  # Add FORMS for better field detection
+            FeatureTypes=["TABLES"],
         )
         logger.debug(f"  Textract response type: {type(response)}")
         if hasattr(response, "keys"):
