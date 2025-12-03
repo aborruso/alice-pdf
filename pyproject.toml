@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "alice-pdf"
-version = "0.1.2"
+version = "0.1.3"
 description = "Extract tables from PDFs using Mistral OCR"
 readme = "README.md"
 requires-python = ">=3.9"

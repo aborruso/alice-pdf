@@ -12,12 +12,56 @@ import json
 import time
 import shutil
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import fitz  # PyMuPDF
 from PIL import Image
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+# Global client cache for connection reuse
+_textract_client_cache = {}
+
+
+def _get_textract_client(aws_access_key_id, aws_secret_access_key, aws_region):
+    """
+    Get or create a cached Textract client to reuse connections.
+    Uses connection pooling to reduce latency between calls.
+
+    Args:
+        aws_access_key_id: AWS access key ID
+        aws_secret_access_key: AWS secret access key
+        aws_region: AWS region
+
+    Returns:
+        Cached boto3 Textract client
+    """
+    # Create cache key from credentials
+    cache_key = (aws_access_key_id, aws_secret_access_key, aws_region)
+
+    if cache_key not in _textract_client_cache:
+        import boto3
+        from botocore.config import Config
+
+        # Optimize for reduced latency: more connections, faster retries
+        config = Config(
+            max_pool_connections=50,  # Increase connection pool (default 10)
+            retries={'max_attempts': 3, 'mode': 'standard'},
+            connect_timeout=5,
+            read_timeout=60,
+        )
+
+        _textract_client_cache[cache_key] = boto3.client(
+            "textract",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=aws_region,
+            config=config,
+        )
+        logger.debug(f"Created new Textract client for region {aws_region} with optimized config")
+
+    return _textract_client_cache[cache_key]
 
 
 def natural_sort_key(path):
@@ -47,9 +91,8 @@ def pdf_page_to_base64(pdf_path, page_num, dpi=150):
     doc = fitz.open(pdf_path)
     page = doc[page_num]
 
-    # Render page to pixmap with higher DPI for better OCR
-    actual_dpi = max(dpi, 300)  # Ensure minimum 300 DPI for Textract
-    mat = fitz.Matrix(actual_dpi / 72, actual_dpi / 72)
+    # Render page to pixmap at requested DPI (150-200 recommended for most cases)
+    mat = fitz.Matrix(dpi / 72, dpi / 72)
     pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
 
     # Convert to PIL Image
@@ -179,6 +222,98 @@ def extract_tables_with_textract_api(
     return {"tables": tables}
 
 
+def _process_single_page(
+    pdf_path, page_num, total_pages, idx, page_list_len, output_dir, dpi, textract_client
+):
+    """
+    Process a single PDF page (thread-safe).
+    Returns: (page_num, tables_count, failed, dataframes)
+    """
+    # Check if page already processed
+    existing_files = sorted(
+        list(output_dir.glob(f"{pdf_path.stem}_page{page_num + 1}_table*.csv")),
+        key=natural_sort_key,
+    )
+    if existing_files:
+        logger.info(
+            f"Page {page_num + 1} ({idx}/{page_list_len}) - already processed, skipping"
+        )
+        # Load existing dataframes for merge
+        dataframes = []
+        for csv_file in existing_files:
+            df = pd.read_csv(csv_file, encoding="utf-8-sig")
+            dataframes.append(df)
+        return (page_num, len(existing_files), False, dataframes)
+
+    if page_num >= total_pages:
+        logger.warning(f"Page {page_num + 1} out of range, skipping")
+        return (page_num, 0, True, [])
+
+    logger.info(f"Processing page {page_num + 1} ({idx}/{page_list_len})")
+
+    # Convert page to image (thread-safe: each thread opens its own document)
+    try:
+        doc = fitz.open(pdf_path)
+        page = doc[page_num]
+        mat = fitz.Matrix(dpi / 72, dpi / 72)
+        pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+        # Convert to bytes for Textract
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        image_bytes = buffered.getvalue()
+        doc.close()
+    except Exception as e:
+        logger.error(f"  Failed to render page {page_num + 1}: {e}")
+        return (page_num, 0, True, [])
+
+    # Extract tables using Textract
+    try:
+        result = extract_tables_with_textract_api(
+            textract_client, image_bytes, page_num
+        )
+    except Exception as e:
+        logger.error(f"  Failed to extract tables from page {page_num + 1}: {e}")
+        return (page_num, 0, True, [])
+
+    # Process tables
+    tables = result.get("tables", [])
+    dataframes = []
+    tables_saved = 0
+
+    for i, table_data in enumerate(tables):
+        headers = table_data.get("headers", [])
+        rows = table_data.get("rows", [])
+
+        if not rows:
+            logger.info(f"  Table {i}: empty, skipping")
+            continue
+
+        # Create DataFrame with headers if available
+        if headers:
+            df = pd.DataFrame(rows, columns=headers)
+        else:
+            df = pd.DataFrame(rows)
+
+        # Add page column
+        df.insert(0, "page", page_num + 1)
+
+        logger.info(f"  Table {i}: {df.shape}")
+
+        # Save individual CSV
+        output_file = (
+            output_dir / f"{pdf_path.stem}_page{page_num + 1}_table{i}.csv"
+        )
+        df.to_csv(output_file, index=False, encoding="utf-8-sig")
+        logger.info(f"    Saved: {output_file}")
+
+        dataframes.append(df)
+        tables_saved += 1
+
+    return (page_num, tables_saved, False, dataframes)
+
+
 def extract_tables_with_textract(
     pdf_path,
     output_dir,
@@ -191,7 +326,7 @@ def extract_tables_with_textract(
     resume=True,
 ):
     """
-    Extract tables from PDF using Amazon Textract.
+    Extract tables from PDF using Amazon Textract sync API with parallel processing.
 
     Args:
         pdf_path: Path to PDF file
@@ -234,12 +369,9 @@ def extract_tables_with_textract(
         most_recent.unlink()
         logger.info(f"Deleted last created file: {most_recent.name}")
 
-    # Initialize Textract client
-    textract_client = boto3.client(
-        "textract",
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name=aws_region,
+    # Get cached Textract client (reuses connection across calls)
+    textract_client = _get_textract_client(
+        aws_access_key_id, aws_secret_access_key, aws_region
     )
 
     # Open PDF
@@ -261,92 +393,49 @@ def extract_tables_with_textract(
     logger.info(f"Processing {len(page_list)} pages from: {pdf_path}")
     logger.info(f"DPI: {dpi}")
 
+    # Check if async recommended (implementation planned for future release)
+    if len(page_list) > 120:
+        logger.warning(
+            f"PDF has {len(page_list)} pages (>120). "
+            f"For large PDFs, async Textract API provides better performance (single batch job vs {len(page_list)} requests). "
+            f"Current version uses sync API with parallel processing (max_workers=5)."
+        )
+
+    logger.info(f"Using sync Textract API with parallel processing")
+    logger.info(f"Parallel execution: max_workers=5")
+
     all_dataframes = []
     table_count = 0
     failed_pages = []
 
-    # Process each page
-    for idx, page_num in enumerate(page_list, start=1):
-        if page_num >= total_pages:
-            logger.warning(f"Page {page_num + 1} out of range, skipping")
-            continue
-
-        # Check if page already processed
-        existing_files = sorted(
-            list(output_dir.glob(f"{pdf_path.stem}_page{page_num + 1}_table*.csv")),
-            key=natural_sort_key,
-        )
-        if existing_files:
-            logger.info(
-                f"Page {page_num + 1} ({idx}/{len(page_list)}) - already processed, skipping"
+    # Process pages in parallel (max 5 workers to respect Textract ~10 req/sec limit)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        # Submit all page processing tasks
+        future_to_page = {}
+        for idx, page_num in enumerate(page_list, start=1):
+            future = executor.submit(
+                _process_single_page,
+                pdf_path,
+                page_num,
+                total_pages,
+                idx,
+                len(page_list),
+                output_dir,
+                dpi,
+                textract_client,
             )
-            table_count += len(existing_files)
-            if merge_output:
-                for csv_file in existing_files:
-                    df = pd.read_csv(csv_file, encoding="utf-8-sig")
-                    all_dataframes.append(df)
-            continue
+            future_to_page[future] = page_num
 
-        logger.info(f"Processing page {page_num + 1} ({idx}/{len(page_list)})")
+        # Collect results as they complete
+        for future in as_completed(future_to_page):
+            page_num, tables_saved, failed, dataframes = future.result()
 
-        # Convert page to image
-        try:
-            page = doc[page_num]
-            mat = fitz.Matrix(dpi / 72, dpi / 72)
-            pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
-            img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-
-            # Convert to bytes for Textract
-            buffered = BytesIO()
-            img.save(buffered, format="PNG")
-            image_bytes = buffered.getvalue()
-        except Exception as e:
-            logger.error(f"  Failed to render page {page_num + 1}: {e}")
-            failed_pages.append(page_num + 1)
-            continue
-
-        # Extract tables using Textract
-        try:
-            result = extract_tables_with_textract_api(
-                textract_client, image_bytes, page_num
-            )
-        except Exception as e:
-            logger.error(f"  Failed to extract tables from page {page_num + 1}: {e}")
-            failed_pages.append(page_num + 1)
-            continue
-
-        # Process tables
-        tables = result.get("tables", [])
-        for i, table_data in enumerate(tables):
-            headers = table_data.get("headers", [])
-            rows = table_data.get("rows", [])
-
-            if not rows:
-                logger.info(f"  Table {i}: empty, skipping")
-                continue
-
-            # Create DataFrame with headers if available
-            if headers:
-                df = pd.DataFrame(rows, columns=headers)
+            if failed:
+                failed_pages.append(page_num + 1)
             else:
-                df = pd.DataFrame(rows)
-
-            # Add page column
-            df.insert(0, "page", page_num + 1)
-
-            logger.info(f"  Table {i}: {df.shape}")
-
-            # Save individual CSV
-            output_file = (
-                output_dir / f"{pdf_path.stem}_page{page_num + 1}_table{i}.csv"
-            )
-            df.to_csv(output_file, index=False, encoding="utf-8-sig")
-            logger.info(f"    Saved: {output_file}")
-
-            if merge_output:
-                all_dataframes.append(df)
-
-            table_count += 1
+                table_count += tables_saved
+                if merge_output:
+                    all_dataframes.extend(dataframes)
 
     doc.close()
 

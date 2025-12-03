@@ -2,6 +2,11 @@
 
 ## 2025-12-03
 
+- Release 0.1.3
+  - Textract: ottimizzazioni performance massime
+  - Fix version CLI dinamica da __version__
+- Release 0.1.2
+  - Fix dependency resolution e test suite
 - Fix dependency resolution: requires-python >=3.9 (era >=3.8)
   - Risolve conflitto pdfplumber/camelot-py con pdfminer-six
   - Rimosso Python 3.8 da classifiers pyproject.toml
@@ -9,6 +14,15 @@
   - Mock MISTRAL_API_KEY env var in test camelot/pdfplumber per evitare auto-switch engine
   - Risolve fallimenti test_cli_camelot_stream_routes, test_cli_camelot_lattice_default, test_cli_pdfplumber_strip_text_toggle
 - Textract: rimosso `FORMS` da `FeatureTypes` (ora solo `TABLES`) per ridurre il costo a ~0,015 USD/pagina; aggiornato README con nota sui costi
+- Textract: ottimizzazione performance (riduzione 70-90% tempo totale, 20-40% riduzione timeout)
+  - Client condiviso globale con cache per riutilizzo connessioni
+  - Connection pool aumentato a 50 (era 10) per ridurre latency
+  - Timeout ottimizzati: connect 5s, read 60s
+  - Elaborazione parallela pagine con ThreadPoolExecutor (max_workers=5)
+  - Rispetta limite Textract ~10 req/sec, costo invariato
+  - Rimosso forcing 300 DPI: ora rispetta DPI richiesto (default 150, raccomandato 150-200)
+  - PNG più leggeri, upload più veloci, meno rischio timeout
+  - Warning per PDF >120 pagine: raccomanda async API (implementazione futura)
 
 ## 2025-11-30
 

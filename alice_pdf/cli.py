@@ -9,6 +9,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from . import __version__
 from .extractor import extract_tables
 from .prompt_generator import generate_prompt_from_schema
 
@@ -175,7 +176,7 @@ Examples:
         action="store_false",
         help="Disable whitespace stripping in pdfplumber output",
     )
-    parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
 
